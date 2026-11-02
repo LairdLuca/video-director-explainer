@@ -1,6 +1,6 @@
 # video-director-explainer
 
-**Versione 1.1.0**, vedi il [changelog](CHANGELOG.md) (in inglese). [English](README.md) | Italiano
+**Versione 1.2.0**, vedi il [changelog](CHANGELOG.md) (in inglese). [English](README.md) | Italiano
 
 [![Un breve video sul plugin, fatto con il plugin stesso](media/video-director-explainer-it.jpg)](media/video-director-explainer-it.mp4)
 
@@ -149,7 +149,9 @@ in
 restano dopo gli aggiornamenti. Per cambiarle, rilancia il setup. **Ogni
 scelta si può cambiare per un solo video** chiedendolo: "senza
 sottotitoli", "voce femminile", "niente pagina", "non aprirlo", "in inglese",
-"verticale", "senza musica", "musica più bassa", "più ritmo".
+"verticale", "senza musica", "musica più bassa", "più ritmo". Quando il
+video ha decisioni da prendere, "fammi rispondere nella pagina" le rende un
+modulo nella pagina, con Copia risposte e Salva risposte.
 
 ## Requisiti
 

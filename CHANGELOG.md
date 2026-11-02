@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.2.0 (2026-11-02)
+
+**Answer the decisions in the page.** A page with decisions to take can now
+be the form in which the reader takes them.
+
+- `page.json` has three new fields: `decisionForm` (the decisions become a
+  form), `options[].proposed` (the option the facts propose, marked on the
+  page) and `decisions[].group` (a heading above a group of decisions).
+- With `decisionForm`, each decision has its options as choices, "Another
+  answer" and a text field; the answers stay in the browser while they are
+  written, kept by question, and a bar at the bottom counts them and has
+  **Proposal where there is no answer**, **Copy answers** and **Save
+  answers** (`<slug>-answers.md`). One small inline script, no network.
+- The make skill sets it only when the user asks to answer in the page;
+  `references/page.md` has a section "The decision form".
+- The page check of `facts.md` reads the group headings too.
+
 ## 1.1.0 (2026-10-23)
 
 **Real screens in the videos.** A video about an application can now show

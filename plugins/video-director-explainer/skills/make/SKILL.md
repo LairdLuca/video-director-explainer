@@ -393,6 +393,13 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/page.mjs" "<videoDir>"
 It writes `out/<slug>.html`, one self-contained file that links the MP4 next
 to it.
 
+When the user asks to answer the decisions in the page ("let me answer in
+the page", "the decisions as a form"), set `"decisionForm": true` and mark
+the option the facts propose with `"proposed": true`: the decisions become
+a form with a choice and a text field each, and the reader copies or saves
+the answers from the page ([page.md](references/page.md), "The decision
+form"). Without that request the page stays a page to read.
+
 ### 10. Final review
 
 Make the final contact sheet and start one fresh sub-agent with the brief in

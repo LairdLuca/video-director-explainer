@@ -1,6 +1,6 @@
 # video-director-explainer
 
-**Version 1.1.0**, see the [changelog](CHANGELOG.md). English | [Italiano](README.it.md)
+**Version 1.2.0**, see the [changelog](CHANGELOG.md). English | [Italiano](README.it.md)
 
 [![A short video about the plugin, made with the plugin itself](media/video-director-explainer-en.jpg)](media/video-director-explainer-en.mp4)
 
@@ -142,7 +142,9 @@ Every key, its values and the phrases that change it for one video are in
 The answers are saved in the plugin's data folder and survive updates. Run
 setup again to change them. **Any choice can be changed for a single video**
 just by asking: "without captions", "female voice", "no page", "don't open it",
-"in English", "vertical", "no music", "music lower", "more rhythm".
+"in English", "vertical", "no music", "music lower", "more rhythm". When the
+video has decisions to take, "let me answer in the page" turns them into a
+form on the page, with Copy answers and Save answers.
 
 ## Requirements
 

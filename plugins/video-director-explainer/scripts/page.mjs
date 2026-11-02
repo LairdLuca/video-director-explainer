@@ -13,7 +13,9 @@ skills/make/references/page.md): title and short explanation, the video
 (linked with a relative path, not embedded), one section per chapter with
 the commands and values shown in the video and their sources, the
 decisions to take (only if page.json has any) and the transcript in a
-collapsed block.
+collapsed block. With "decisionForm": true the decisions become a form the
+reader answers in the page: a choice per decision, a text field, the
+answers kept in the browser, and Copy answers and Save answers at the bottom.
 
 Before writing, every "facts.md:N" source is checked against facts.md (the
 line must exist and not be blank), and commands, values and numbers of 3 or
@@ -21,15 +23,29 @@ more digits on the page are looked up in facts.md; misses are warnings. A
 number of a section's text that facts.md has, but that no command, value
 or "source" of the section backs, is a warning too.
 
-The page is one file: inline CSS, no script, no CDN, no web font, no
-network; light and dark theme with the video palette; readable at phone
-width; works from file://.
+The page is one file: inline CSS, no CDN, no web font, no network, and no
+script except the small inline one of the decision form; light and dark
+theme with the video palette; readable at phone width; works from file://.
 Exit code 0 on success, 1 if page.json is invalid, 2 on bad arguments.
 `;
 
 const LABELS = {
-  it: { video: "Video", description: "Descrizione", decisions: "Decisioni da prendere", transcript: "Trascrizione", source: "fonte", owner: "decide", options: "Opzioni", proposal: "Proposta, da confermare", noOptions: "Le fonti non danno opzioni.", noVideo: "Il tuo browser non riproduce questo video:" },
-  en: { video: "Video", description: "Description", decisions: "Decisions to take", transcript: "Transcript", source: "source", owner: "decides", options: "Options", proposal: "Proposal, to be confirmed", noOptions: "The sources give no options.", noVideo: "Your browser cannot play this video:" },
+  it: {
+    video: "Video", description: "Descrizione", decisions: "Decisioni da prendere", transcript: "Trascrizione", source: "fonte", owner: "decide", options: "Opzioni", proposal: "Proposta, da confermare", noOptions: "Le fonti non danno opzioni.", noVideo: "Il tuo browser non riproduce questo video:",
+    proposed: "proposta", formIntro: "Scegli un'opzione per ogni decisione, oppure scrivi la tua risposta nel campo sotto. La proposta è segnata. Quello che scegli e scrivi resta in questo browser anche se ricarichi la pagina. Alla fine premi Copia risposte e incolla il testo in chat, oppure Salva risposte.",
+    other: "Un'altra risposta: la scrivo qui sotto", notePlaceholder: "Nota facoltativa, oppure la tua risposta se scegli \"Un'altra risposta\"", freePlaceholder: "La tua risposta",
+    fill: "Proposta dove manca la risposta", copy: "Copia risposte", save: "Salva risposte", answered: "con risposta", of: "di",
+    filled: "Proposta impostata dove mancava la risposta: {n}. Le scelte già fatte restano.", copied: "Copiate: incollale in chat.", copyFailed: "Copia non riuscita: usa Salva risposte.", saved: "Salvate nella cartella dei download.", missing: "Senza risposta:",
+    answers: "risposte", answer: "Risposta", note: "Nota", none: "(nessuna)",
+  },
+  en: {
+    video: "Video", description: "Description", decisions: "Decisions to take", transcript: "Transcript", source: "source", owner: "decides", options: "Options", proposal: "Proposal, to be confirmed", noOptions: "The sources give no options.", noVideo: "Your browser cannot play this video:",
+    proposed: "proposal", formIntro: "Pick an option for each decision, or write your own answer in the field below it. The proposal is marked. What you pick and write stays in this browser, even after a reload. When done, press Copy answers and paste the text in the chat, or Save answers.",
+    other: "Another answer: I write it below", notePlaceholder: "Optional note, or your answer if you pick \"Another answer\"", freePlaceholder: "Your answer",
+    fill: "Proposal where there is no answer", copy: "Copy answers", save: "Save answers", answered: "answered", of: "of",
+    filled: "Proposal set where there was no answer: {n}. The choices already made stay.", copied: "Copied: paste them in the chat.", copyFailed: "Copy failed: use Save answers.", saved: "Saved in the downloads folder.", missing: "No answer yet:",
+    answers: "answers", answer: "Answer", note: "Note", none: "(none)",
+  },
 };
 
 const esc = (s) =>
@@ -79,10 +95,35 @@ export const validatePage = (page) => {
       opts.forEach((o, k) => {
         if (!str(o.label)) errors.push(`decisions[${i}].options[${k}].label is required`);
         if (opts.length > 1 && !str(o.tradeoff)) errors.push(`decisions[${i}].options[${k}].tradeoff is required when there are 2 or more options`);
+        if (o.proposed !== undefined && typeof o.proposed !== "boolean") errors.push(`decisions[${i}].options[${k}].proposed must be true or false`);
       });
+      if (opts.filter((o) => o.proposed === true).length > 1) errors.push(`decisions[${i}]: at most one option is proposed`);
+      if (d.group !== undefined && !str(d.group)) errors.push(`decisions[${i}].group must be text, or left out`);
       if (!str(d.owner)) errors.push(`decisions[${i}].owner is required (who decides)`);
       if (!str(d.source)) errors.push(`decisions[${i}].source is required`);
     });
+  }
+  if (page.decisionForm !== undefined) {
+    if (typeof page.decisionForm !== "boolean") errors.push("decisionForm must be true or false");
+    else if (page.decisionForm && !(Array.isArray(page.decisions) && page.decisions.length)) {
+      errors.push("decisionForm needs decisions: leave it out when there are none");
+    } else if (page.decisionForm) {
+      // The form keeps and copies the answers by question, and the choice
+      // by its label: two equal questions or labels would share one answer
+      const seen = new Set();
+      page.decisions.forEach((d, i) => {
+        const q = String(d.question ?? "").trim();
+        if (q && seen.has(q)) errors.push(`decisions[${i}].question repeats an earlier one (the form keeps the answers by question)`);
+        seen.add(q);
+        const labels = (Array.isArray(d.options) ? d.options : []).map((o) => String(o.label ?? "").trim());
+        if (new Set(labels).size !== labels.length) errors.push(`decisions[${i}]: two options with the same label (the form keeps the choice by label)`);
+      });
+    }
+  }
+  // A decision with no group after a grouped one would read as part of it
+  if (Array.isArray(page.decisions)) {
+    const grouped = page.decisions.filter((d) => d.group !== undefined).length;
+    if (grouped && grouped !== page.decisions.length) errors.push("decisions: give every decision a group, or none");
   }
   const t = page.transcript;
   const tOk = str(t) || (Array.isArray(t) && t.length && t.every((x) => str(x) || (x && str(x.text))));
@@ -118,18 +159,151 @@ dl.values{margin:10px 0 12px;display:grid;grid-template-columns:max-content 1fr;
 dl.values dt{font-weight:700}
 dl.values dd{margin:0}
 dl.values .src{margin:0 0 0 6px}
+main.with-form{padding-bottom:240px}
+.group{font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:28px 0 6px}
+.tag{font-size:.75rem;font-weight:700;color:var(--accent);margin-left:6px;white-space:nowrap}
+.decision label.opt{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--hairline);border-radius:8px;padding:9px 11px;margin:6px 0;cursor:pointer}
+.decision label.opt:has(input:checked){border-color:var(--accent);background:var(--bg-alt)}
+.decision label.opt input{margin-top:.35em;flex:none}
+.decision textarea{display:block;width:100%;min-height:56px;margin:8px 0;padding:8px 10px;border:1px solid var(--hairline);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;resize:vertical}
+.decision.missing{border-color:var(--warning)}
+.answer-bar{position:fixed;left:0;right:0;bottom:0;z-index:10;max-height:40vh;overflow:auto;background:var(--card);border-top:1px solid var(--hairline);padding:10px 16px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+.answer-bar button{font:inherit;font-size:.95rem;border:1px solid var(--accent);border-radius:8px;padding:8px 14px;cursor:pointer;background:var(--card);color:var(--accent)}
+.answer-bar button.main{background:var(--accent);color:var(--card)}
+.answer-bar .meta{margin:0}
+.answer-bar .msg{width:100%;text-align:center;min-height:1.2em;max-height:4.5em;overflow:auto}
 details{background:var(--card);border:1px solid var(--hairline);border-radius:12px;padding:12px 16px;margin-top:48px}
 summary{cursor:pointer;font-weight:700}
 details p{margin:10px 0}
 a{color:var(--accent)}
 `;
 
-export const renderPage = (page, { chapterLabels = new Map() } = {}) => {
+/** Id of a question in the form, from its text: a rebuilt page whose
+ * decisions moved or were added keeps the answers already given. */
+const questionId = (q) => {
+  let h = 0x811c9dc5;
+  for (const ch of String(q ?? "").trim()) h = Math.imul(h ^ ch.codePointAt(0), 0x01000193) >>> 0;
+  return h.toString(36);
+};
+
+// The decision form, in the page: keeps the answers in the browser by
+// question, copies them as one block of text and saves them as a file.
+// No network. Written for a gate where the answers, written in a page,
+// were asked for again in chat.
+const FORM_JS = `
+(()=>{
+const D=JSON.parse(document.getElementById("decision-data").textContent),L=D.labels;
+let st={};
+try{st=JSON.parse(localStorage.getItem(D.key)||"{}")||{}}catch(e){st={}}
+const keep=()=>{try{localStorage.setItem(D.key,JSON.stringify(st))}catch(e){}};
+const box=id=>document.getElementById("q-"+id),msg=document.getElementById("answer-msg");
+const answer=q=>{
+ const a=st[q.id]||{},n=(a.n||"").trim();
+ if(!a.x&&typeof a.o==="string"){
+  // An option renamed or removed since: no answer, not the note as one
+  return q.options.includes(a.o)?{r:a.o,n}:null;
+ }
+ // A text written with no option picked, or with Another answer, is the answer
+ return n?{r:n,n:""}:null;
+};
+const missing=()=>D.q.filter(q=>!answer(q));
+const count=()=>{
+ const m=missing();
+ D.q.forEach(q=>box(q.id).classList.remove("missing"));
+ document.getElementById("answer-count").textContent=(D.q.length-m.length)+" "+L.of+" "+D.q.length+" "+L.answered;
+};
+const tell=t=>{
+ const m=missing();
+ m.forEach(q=>box(q.id).classList.add("missing"));
+ msg.textContent=t+(m.length?" "+L.missing+" "+m.map(q=>q.question).join("; "):"");
+};
+const text=()=>{
+ const out=[D.title+": "+L.answers];
+ D.q.forEach(q=>{
+  const a=answer(q);
+  out.push("","## "+q.question,L.answer+": "+(a?a.r:L.none));
+  if(a&&a.n)out.push(L.note+": "+a.n);
+ });
+ return out.join("\\n")+"\\n";
+};
+D.q.forEach(q=>{
+ const s=box(q.id),ta=s.querySelector("textarea"),a=st[q.id]||{};
+ s.querySelectorAll("input[type=radio]").forEach(r=>{
+  const k=r.value==="other"?-1:Number(r.value);
+  if(k<0?a.x:a.o===q.options[k])r.checked=true;
+  r.addEventListener("change",()=>{
+   st[q.id]=Object.assign(st[q.id]||{},k<0?{x:true,o:null}:{x:false,o:q.options[k]});
+   keep();count();if(k<0)ta.focus();
+  });
+ });
+ ta.value=a.n||"";
+ ta.addEventListener("input",()=>{st[q.id]=Object.assign(st[q.id]||{},{n:ta.value});keep();count()});
+});
+document.getElementById("answer-fill").onclick=()=>{
+ let k=0;
+ D.q.forEach(q=>{
+  if(answer(q)||q.proposed<0)return;
+  st[q.id]=Object.assign(st[q.id]||{},{x:false,o:q.options[q.proposed]});k++;
+  box(q.id).querySelectorAll("input[type=radio]").forEach(r=>{r.checked=r.value===String(q.proposed)});
+ });
+ keep();count();tell(L.filled.replace("{n}",k));
+};
+document.getElementById("answer-copy").onclick=async()=>{
+ const t=text();
+ try{await navigator.clipboard.writeText(t);tell(L.copied)}
+ catch(e){
+  const ta=document.createElement("textarea");ta.value=t;ta.style.cssText="position:fixed;top:0;left:0;opacity:0";
+  document.body.appendChild(ta);ta.focus({preventScroll:true});ta.select();
+  let ok=false;try{ok=document.execCommand("copy")}catch(_){}
+  ta.remove();if(ok)tell(L.copied);else msg.textContent=L.copyFailed;
+ }
+};
+document.getElementById("answer-save").onclick=()=>{
+ const a=document.createElement("a");
+ a.href=URL.createObjectURL(new Blob([text()],{type:"text/markdown;charset=utf-8"}));
+ a.download=D.file;document.body.appendChild(a);a.click();a.remove();
+ tell(L.saved+" "+D.file);
+};
+count();
+})();
+`;
+
+/** The bar of the form and its data, after the last decision. */
+const formTail = (page, L) => {
+  const slug = path.basename(String(page.video)).replace(/\.[^.]+$/, "");
+  const pick = ["of", "answered", "missing", "answers", "answer", "note", "none", "filled", "copied", "copyFailed", "saved"];
+  const data = {
+    key: `video-director-explainer:answers:${slug}`,
+    file: `${slug}-answers.md`,
+    title: page.title,
+    labels: Object.fromEntries(pick.map((k) => [k, L[k]])),
+    q: page.decisions.map((d) => {
+      const opts = Array.isArray(d.options) ? d.options : [];
+      // One line per question in the answers block
+      return { id: questionId(d.question), question: String(d.question).replace(/\s+/g, " ").trim(), options: opts.map((o) => o.label), proposed: opts.findIndex((o) => o.proposed === true) };
+    }),
+  };
+  return [
+    '<div class="answer-bar">',
+    '<span class="meta" id="answer-count"></span>',
+    `<button type="button" id="answer-fill">${esc(L.fill)}</button>`,
+    `<button type="button" class="main" id="answer-copy">${esc(L.copy)}</button>`,
+    `<button type="button" class="main" id="answer-save">${esc(L.save)}</button>`,
+    '<p class="meta msg" id="answer-msg" role="status"></p>',
+    "</div>",
+    // The data cannot close its own script tag
+    `<script type="application/json" id="decision-data">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`,
+    `<script>${FORM_JS.trim()}</script>`,
+  ];
+};
+
+export const renderPage =(page, { chapterLabels = new Map() } = {}) => {
   const L = LABELS[String(page.language).slice(0, 2)] ?? LABELS.en;
+  const form = page.decisionForm === true && Array.isArray(page.decisions) && page.decisions.length > 0;
   const out = [];
   out.push("<!doctype html>", `<html lang="${esc(page.language)}">`, "<head>", '<meta charset="utf-8">');
   out.push('<meta name="viewport" content="width=device-width, initial-scale=1">', '<meta name="color-scheme" content="light dark">');
-  out.push(`<title>${esc(page.title)}</title>`, `<style>${CSS.trim()}</style>`, "</head>", "<body>", "<main>");
+  out.push(`<title>${esc(page.title)}</title>`, `<style>${CSS.trim()}</style>`, "</head>", "<body>", form ? '<main class="with-form">' : "<main>");
   out.push(`<h1>${esc(page.title)}</h1>`);
   for (const p of paragraphs(page.summary)) out.push(`<p class="summary">${inline(p)}</p>`);
   out.push(
@@ -155,18 +329,36 @@ export const renderPage = (page, { chapterLabels = new Map() } = {}) => {
   }
   if (Array.isArray(page.decisions) && page.decisions.length) {
     out.push(`<h2>${esc(L.decisions)}</h2>`);
+    if (form) out.push(`<p class="meta">${esc(L.formIntro)}</p>`);
+    let group;
     for (const d of page.decisions) {
+      if (d.group && d.group !== group) out.push(`<p class="group">${esc(d.group)}</p>`);
+      group = d.group;
       const opts = Array.isArray(d.options) ? d.options : [];
+      const optionText = (o) =>
+        `<strong>${inline(o.label)}</strong>${o.tradeoff ? `: ${inline(o.tradeoff)}` : ""}${o.proposed ? `<span class="tag">${esc(L.proposed)}</span>` : ""}`;
+      const owner = `<p class="meta">${esc(L.owner)}: ${esc(d.owner)} · ${esc(L.source)}: ${esc(d.source)}</p>`;
+      if (form) {
+        const id = questionId(d.question);
+        out.push(`<div class="decision" id="q-${id}">`, `<h3>${inline(d.question)}</h3>`);
+        if (d.note) out.push(`<p>${inline(d.note)}</p>`);
+        opts.forEach((o, k) => out.push(`<label class="opt"><input type="radio" name="q-${id}" value="${k}"><span>${optionText(o)}</span></label>`));
+        if (opts.length) out.push(`<label class="opt"><input type="radio" name="q-${id}" value="other"><span>${esc(L.other)}</span></label>`);
+        const hint = opts.length ? L.notePlaceholder : L.freePlaceholder;
+        out.push(`<textarea aria-label="${esc(hint)}" placeholder="${esc(hint)}"></textarea>`, owner, "</div>");
+        continue;
+      }
       out.push('<div class="decision">', `<h3>${inline(d.question)}</h3>`);
       if (!opts.length) out.push(`<p class="meta">${esc(L.noOptions)}</p>`);
       else {
         out.push(`<p class="meta">${esc(opts.length === 1 ? L.proposal : L.options)}</p>`, "<ul>");
-        for (const o of opts) out.push(`<li><strong>${inline(o.label)}</strong>${o.tradeoff ? `: ${inline(o.tradeoff)}` : ""}</li>`);
+        for (const o of opts) out.push(`<li>${optionText(o)}</li>`);
         out.push("</ul>");
       }
       if (d.note) out.push(`<p>${inline(d.note)}</p>`);
-      out.push(`<p class="meta">${esc(L.owner)}: ${esc(d.owner)} · ${esc(L.source)}: ${esc(d.source)}</p>`, "</div>");
+      out.push(owner, "</div>");
     }
+    if (form) out.push(...formTail(page, L));
   }
   out.push("<details>", `<summary>${esc(L.transcript)}</summary>`);
   const t = typeof page.transcript === "string" ? paragraphs(page.transcript) : page.transcript;
@@ -225,7 +417,7 @@ export const checkAgainstFacts = (page, videoDir) => {
   }
   for (const d of page.decisions ?? []) {
     sources.push(d.source);
-    texts.push(d.question, d.note, ...(Array.isArray(d.options) ? d.options : []).flatMap((o) => [o.label, o.tradeoff]));
+    texts.push(d.group, d.question, d.note, ...(Array.isArray(d.options) ? d.options : []).flatMap((o) => [o.label, o.tradeoff]));
   }
   for (const src of sources) {
     for (const m of String(src ?? "").matchAll(/facts\.md:(\d+)(?:-(\d+))?/g)) {
