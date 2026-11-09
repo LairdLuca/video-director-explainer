@@ -1,6 +1,6 @@
 # video-director-explainer
 
-**Version 1.2.0**, see the [changelog](CHANGELOG.md). English | [Italiano](README.it.md)
+**Version 1.3.0**, see the [changelog](CHANGELOG.md). English | [Italiano](README.it.md)
 
 [![A short video about the plugin, made with the plugin itself](media/video-director-explainer-en.jpg)](media/video-director-explainer-en.mp4)
 
@@ -33,12 +33,17 @@ explainer; the rules are in
 [`skills/make/references/style.md`](plugins/video-director-explainer/skills/make/references/style.md).
 In short:
 
-- **one subject per frame, big**: a terminal across the frame, a 2-4 node
-  diagram, a status card, a number; nothing under 28 px (terminals and
-  code 24 px on the narrow formats);
+- **one subject per frame, big**: a terminal across the frame, a
+  diagram, a screen of the application, a status card, a number; nothing
+  under 28 px (terminals and code 24 px on the narrow formats);
+- **diagrams that explain**, by default at least three of different
+  shapes: an overview map with zones, a sequence in time with the actors in
+  columns, decision branches, a comparison grid, a bar chart with the real
+  numbers; each one builds on the words that name its parts, with a legend;
 - **something changes on the spoken word that names it**, about every 2
   seconds: a command types, a line gets brackets, a tick strokes in;
-- a slow camera on every shot, on **squared paper**: a light paper for
+- a still frame on **squared paper**, with no zoom that starts again at
+  every cut: a light paper for
   concepts (a yellow notepad by default, seven others to choose from) and a
   faded black one for close-ups and the lesson, with a crossfade between
   the two;
@@ -56,9 +61,12 @@ In short:
   subject, that changes with each chapter and ends with the film, and a few
   **sound effects** (a chapter change, the error, the passing check), only
   in the pauses of the narration, never over a word;
-- **real screens** of the application the video is about: screenshots
-  from your tests or captured from a web app with the same headless browser
-  that renders the video, a camera that pans to the field the narration
+- **real screens** of the application the video is about, by default:
+  the way from sign-in to the screen the work changes, screen after screen,
+  then the screens the narration talks about, and a screen still to build
+  drawn on the real one and labelled as a proposal. Screenshots from your
+  tests or captured from a web app with the same headless browser that
+  renders the video, a slow pan or zoom (1.6 s) to the field the narration
   names, highlights on boxes measured on the page, and names, accounts and
   amounts covered with solid masks drawn into the image;
 - the symptom of the first shot comes back resolved at the end.
@@ -187,15 +195,17 @@ Remotion checks that download, not a sha256 of this plugin.
    after asking, with the login read from an env file and nothing but the
    app's own host reached. Claude looks at every image and covers what
    must not be seen.
-2. **Narration** (`script.json`): 60-90 seconds, one idea per sentence, in
-   chapters. **Checkpoint**: you see the script and the chapters before the
+2. **Narration** (`script.json`): the time the subject needs (about 60-90
+   seconds for a fix, 2-4 minutes for a task with its screens and
+   diagrams), one idea per sentence, in chapters, starting from what the
+   user of the application sees. **Checkpoint**: you see the script and the chapters before the
    voice is recorded (unless checkpoints are `none`).
 3. **Voice**: one WAV per sentence with Kokoro; a local Whisper model listens
    to every sentence, gives the word timings and lists English terms it did
    not recognise, and Claude fixes them. Commands, file names and
    identifiers are marked as code for the captions.
-4. **Storyboard** (`storyboard.json`): shots from a catalogue of nine scene
-   types, every visual change anchored to a spoken word; a lint checks
+4. **Storyboard** (`storyboard.json`): shots from a catalogue of fifteen
+   scene types, every visual change anchored to a spoken word; a lint checks
    anchors, lengths, layout limits of the chosen format, where the sound
    effects fall, and that every command on screen is in the facts.
 5. **Stills**: contact sheets that Claude reads as images, and a freeze probe,
@@ -263,7 +273,10 @@ License.
   no capture of desktop applications (import their screenshots), none
   behind single sign-on yet. The automatic masks find emails, IBANs and
   numbers, not names: Claude's look at each image does that.
-- The **Custom** scene has been tried with a simple chart only.
+- The **Custom** scene has been tried with a simple chart only. The
+  diagram and screen scenes of 1.3.0 were used first as custom scenes in
+  two task videos of about 5 minutes, then checked from the catalogue on
+  one lab video; not yet on 9:16 or 1:1.
 - A fix after the final review means a **full re-render** (about 5 minutes).
 - Each video project carries its own `node_modules` and headless browser
   (about 600 MB).

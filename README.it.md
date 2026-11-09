@@ -1,6 +1,6 @@
 # video-director-explainer
 
-**Versione 1.2.0**, vedi il [changelog](CHANGELOG.md) (in inglese). [English](README.md) | Italiano
+**Versione 1.3.0**, vedi il [changelog](CHANGELOG.md) (in inglese). [English](README.md) | Italiano
 
 [![Un breve video sul plugin, fatto con il plugin stesso](media/video-director-explainer-it.jpg)](media/video-director-explainer-it.mp4)
 
@@ -36,13 +36,19 @@ di 90 secondi; le regole sono in
 (in inglese). In breve:
 
 - **un soggetto per inquadratura, grande**: un terminale che occupa il
-  fotogramma, un diagramma di 2-4 nodi, una scheda di stato, un numero;
-  niente sotto i 28 px (terminali e codice 24 px nei formati stretti);
+  fotogramma, uno schema, una schermata dell'applicazione, una scheda di
+  stato, un numero; niente sotto i 28 px (terminali e codice 24 px nei
+  formati stretti);
+- **schemi che spiegano**, di default almeno tre di forme diverse: una
+  mappa d'insieme con zone, una sequenza nel tempo con gli attori in
+  colonna, rami di decisione, una griglia di confronto, un grafico a barre
+  con i numeri veri; ognuno si costruisce sulle parole che ne nominano i
+  pezzi, con una legenda;
 - **qualcosa cambia sulla parola detta che lo nomina**, circa ogni 2
   secondi: un comando si scrive, una riga si mette tra parentesi, una spunta
   si disegna;
-- un movimento lento di camera su ogni inquadratura, su **carta a
-  quadretti**: una carta chiara per i concetti (un blocco giallo di default,
+- un'inquadratura ferma su **carta a quadretti**, senza uno zoom che
+  riparte a ogni stacco: una carta chiara per i concetti (un blocco giallo di default,
   altre sette a scelta) e una nera sbiadita per i dettagli e la lezione
   finale, con una dissolvenza tra le due;
 - **tre formati**: 16:9 per le spiegazioni e i comandi lunghi, 9:16 per un
@@ -59,11 +65,15 @@ di 90 secondi; le regole sono in
   soggetto, che cambia a ogni capitolo e finisce con il filmato, e pochi
   **effetti sonori** (un cambio di capitolo, l'errore, il controllo che
   passa), solo nelle pause della narrazione, mai sopra una parola;
-- **schermate vere** dell'applicazione di cui parla il video: screenshot
-  dei tuoi test o catturati da una web app con lo stesso browser headless
-  che renderizza il video, una camera che va sul campo nominato dalla
-  narrazione, evidenziazioni su box misurati sulla pagina, e nomi, conti e
-  importi coperti con maschere piene scritte nell'immagine;
+- **schermate vere** dell'applicazione di cui parla il video, di
+  default: il percorso dall'accesso alla schermata che il lavoro cambia,
+  schermata per schermata, poi le schermate di cui parla la narrazione, e
+  una schermata ancora da fare disegnata su quella vera ed etichettata come
+  proposta. Screenshot dei tuoi test o catturati da una web app con lo
+  stesso browser headless che renderizza il video, un movimento o uno zoom
+  lento (1,6 s) sul campo nominato dalla narrazione, evidenziazioni su box
+  misurati sulla pagina, e nomi, conti e importi coperti con maschere piene
+  scritte nell'immagine;
 - il sintomo della prima inquadratura torna risolto alla fine.
 
 ## Installazione
@@ -196,15 +206,17 @@ Remotion, non uno sha256 di questo plugin.
    web app, dopo averlo chiesto, con il login letto da un file env e
    nessun host raggiunto oltre a quello dell'app. Claude guarda ogni
    immagine e copre quello che non si deve vedere.
-2. **Narrazione** (`script.json`): 60-90 secondi, un'idea per frase, divisa
-   in capitoli. **Checkpoint**: vedi il copione e i capitoli prima che la
+2. **Narrazione** (`script.json`): il tempo che serve al soggetto (circa
+   60-90 secondi per una correzione, 2-4 minuti per un task con le sue
+   schermate e i suoi schemi), un'idea per frase, divisa in capitoli,
+   partendo da quello che vede chi usa l'applicazione. **Checkpoint**: vedi il copione e i capitoli prima che la
    voce venga registrata (a meno che i checkpoint siano `none`).
 3. **Voce**: un WAV per frase con Kokoro; un modello Whisper locale ascolta
    ogni frase, dà i tempi delle parole ed elenca i termini inglesi che non ha
    riconosciuto, e Claude li corregge. Comandi, nomi di file e identificatori
    sono marcati come codice per i sottotitoli.
 4. **Storyboard** (`storyboard.json`): inquadrature prese da un catalogo di
-   nove tipi di scena, ogni cambio visivo agganciato a una parola detta; un
+   quindici tipi di scena, ogni cambio visivo agganciato a una parola detta; un
    lint controlla gli agganci, le durate, i limiti di layout del formato
    scelto, dove cadono gli effetti sonori e che ogni comando a schermo sia
    nei fatti.
@@ -280,7 +292,10 @@ li contiene), e `@remotion/transitions` dichiara `UNLICENSED` nel suo
   importano gli screenshot), nessuna ancora dietro single sign-on. Le
   maschere automatiche trovano email, IBAN e numeri, non i nomi: per quelli
   c'è lo sguardo di Claude su ogni immagine.
-- La scena **Custom** è stata provata solo con un grafico semplice.
+- La scena **Custom** è stata provata solo con un grafico semplice. Le
+  scene di schemi e schermate della 1.3.0 sono state usate prima come
+  scene custom in due video di task di circa 5 minuti, poi provate dal
+  catalogo su un video di laboratorio; non ancora in 9:16 o 1:1.
 - Una correzione dopo la review finale vuol dire un **nuovo render
   completo** (circa 5 minuti).
 - Ogni progetto video ha i suoi `node_modules` e il suo browser headless

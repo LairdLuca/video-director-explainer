@@ -5,17 +5,18 @@ import { useShot } from "../shot";
 import { alpha, ruling, sans } from "../theme";
 
 /**
- * Camera (style rule 16): one slow scale curve per shot, keys outside the
- * shot so the visible part never accelerates or stops. The glow and the
- * content sit inside it (style rule 10), so holds never freeze; the paper
- * stays under it (see Paper).
+ * Camera (style rule 16): still by default. A shot may ask for one slow
+ * scale curve (storyboard "camera"), with its keys outside the shot so the
+ * visible part never accelerates or stops; it starts again at every cut. The
+ * glow and the content sit inside it (style rule 10); the paper stays under
+ * it (see Paper).
  */
 export const Camera: React.FC<{
   children: React.ReactNode;
   from?: number;
   to?: number;
   origin?: string;
-}> = ({ children, from = 1, to = 1.04, origin = "50% 48%" }) => {
+}> = ({ children, from = 1, to = from, origin = "50% 48%" }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { shot } = useShot();

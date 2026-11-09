@@ -1,5 +1,55 @@
 # Changelog
 
+## 1.3.0 (2026-11-09)
+
+**Videos that explain with screens and diagrams, by default.** A user asked
+for a task video with screens and charts that explained better; this is
+now what the make skill does without being asked.
+
+- Six new scenes in the catalogue, written first as custom scenes for two
+  task videos:
+  - `Diagram`: zones, nodes (box, diamond, pill, file), edges with elbows,
+    boundary lines, one highlight at a time with the rest dimmed, a legend;
+  - `Lanes`: a sequence in time, the actors in columns, messages, notes,
+    waits that grow, times on the left;
+  - `Matrix`: rows against columns, with texts, ticks and dashes;
+  - `BarChart`: horizontal bars with the real numbers, stacked or as a
+    range;
+  - `ScreenPath`: the way through the application, several screenshots in
+    one shot, brackets on where the user clicks next, a zoom and a note;
+  - `ScreenProposal`: a screen still to build drawn on the real one,
+    always labelled as a proposal.
+  The four diagram scenes share one meaning per `state` (`existing`,
+  `added`, `missing`, `good`, `bad`, `neutral`) and build element by
+  element on the words. The lint checks their props, beats, ids, images
+  (through `shots.mjs`, reviewed), the stage limits, the proposal label
+  and the chart values against `facts.md`.
+- The make skill, by default: a video about an application shows the way to
+  the screen the work changes and the screens it talks about; a video that
+  explains a mechanism has at least three diagrams of different shapes (a
+  row of boxes at most once, lists do not count); the narration starts from
+  what the user sees and why. The stills check asks of every diagram: with
+  the sound off, does it explain something? The final review counts a
+  missing screen or fewer than three diagram shapes as a P1, a proposal
+  without its label as a P0. Style rule 36.
+- **The camera is still by default.** Every shot had a slow zoom (1.00 to
+  1.04) that started again at every cut: on a diagram that goes on over two
+  shots it read as a jump, and the user asked to remove it. A shot can
+  still ask for it with `camera`.
+- **Slower moves on screenshots**: a pan or a zoom in `Screenshot` and
+  `ScreenPath` lasts 1.6 s, eased in and out, from 0.5 s before its word
+  (it was 0.8 s, ending on the word; the user found it too fast), then
+  holds 0.5 s. The lint fails when a move and its hold do not fit in the
+  shot, or the next screen of a `ScreenPath` arrives first, or a screen
+  stays under 1.5 s: the shot gets longer, with the narration saying more
+  of what the user does on that screen (about 3 s for a screen with a
+  zoom).
+- The freeze probe compares stills 2 s apart instead of 0.8 s: with the
+  camera still, the beats (one every 1.5-2.5 s) keep the frame changing.
+- Length: a task or a report with its screens and diagrams takes about 2-4
+  minutes; the lint warns outside 60-300 s without `targetSeconds`
+  (60-90 s before), and a split is proposed over 5 minutes (2 before).
+
 ## 1.2.0 (2026-11-02)
 
 **Answer the decisions in the page.** A page with decisions to take can now

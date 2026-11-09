@@ -15,6 +15,12 @@ export type SceneName =
   | "StepList"
   | "Lesson"
   | "Screenshot"
+  | "ScreenPath"
+  | "ScreenProposal"
+  | "Diagram"
+  | "Lanes"
+  | "Matrix"
+  | "BarChart"
   | "Custom";
 
 /** `code`: a command, file name or identifier (captions draw it in mono). */

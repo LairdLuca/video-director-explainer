@@ -6,14 +6,19 @@ import path from "node:path";
 import { die, loadVideo, parseArgs, printHelp, requireFfmpeg, resolveVideoDir, slash, writeJson } from "./lib/common.mjs";
 import { bundle, fmtTime, renderStills } from "./lib/qa.mjs";
 
+// Seconds between the two stills of a pair (see the help text).
+const WINDOW_S = 2;
+
 const HELP = `
 Usage: node freeze.mjs <videoDir> [--shot <id>] [--min-change 0.3] [--cli] [--rebundle]
 
 Freeze probe: at 3 points of every shot (25%, 50%, 75% of its visible
-time) it renders two stills 0.8 s apart and measures, with ffmpeg, the share
+time) it renders two stills 2 s apart and measures, with ffmpeg, the share
 of pixels whose luma changed by more than 2/255. A pair under --min-change
-percent (default 0.3) is a freeze: something on screen should move (camera,
-typing, a beat) at least every 0.8 s.
+percent (default 0.3) is a freeze: something on screen should change (a
+beat, typing, a caption, a pan) at least every 2 s. The camera is still by
+default, so the window follows the beats (style rule 22: one every
+1.5-2.5 s); it was 0.8 s while a slow zoom filled the gaps.
 
 Writes qa/freeze.json and the PNG pairs in qa/freeze/. Exit code 0 if no
 freeze is found, 1 otherwise, 2 on bad arguments.
@@ -66,7 +71,7 @@ const main = async () => {
   const { timeline } = await loadVideo(videoDir);
   if (timeline.errors.length) die(`the storyboard has errors; run lint-storyboard first:\n${timeline.errors.join("\n")}`, 1);
   const fps = timeline.fps;
-  const gap = Math.round(0.8 * fps);
+  const gap = Math.round(WINDOW_S * fps);
   const minChange = Number(args["min-change"] ?? 0.3) / 100;
   const shots = args.shot ? timeline.shots.filter((s) => s.id === args.shot) : timeline.shots;
   if (!shots.length) die(`no shot "${args.shot}"`);
@@ -112,7 +117,7 @@ const main = async () => {
   const frozen = results.filter((r) => r.frozen);
   writeJson(path.join(outDir, "freeze.json"), {
     ok: frozen.length === 0,
-    rule: `under ${minChange * 100}% of pixels changing over 0.8 s`,
+    rule: `under ${minChange * 100}% of pixels changing over ${WINDOW_S} s`,
     pixelThreshold: THRESHOLD,
     scale: SCALE,
     seconds: Number(((Date.now() - t0) / 1000).toFixed(1)),

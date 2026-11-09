@@ -6,10 +6,12 @@ argument-hint: "[what the video explains] [overrides, e.g. no captions, female v
 
 # video-director-explainer: make a video
 
-You are the director. You turn facts into a 60-90 second narrated explainer:
-one subject per frame, something changing on every spoken word that names it,
-a chapter bar, short captions, and a page with the commands next to it. The
-template renders data files you write; you write no React in the common case.
+You are the director. You turn facts into a narrated explainer that a
+viewer understands: the real screens of the application and diagrams that
+build on the words, one subject per frame, something changing on every
+spoken word that names it, a chapter bar, short captions, and a page with
+the commands next to it. The template renders data files you write; you
+write no React in the common case.
 
 Request: $ARGUMENTS
 
@@ -192,11 +194,11 @@ checkout"):
 
 | Chapter | What it shows | Scene |
 |---|---|---|
-| goal | what the task asks, in one sentence; the task number if the facts give it | `HookStatus` slab alone, or `FlowDiagram` |
-| where it lives | the screens, services or files it touches, as the facts name them | `FlowDiagram` |
-| steps | the work in order, done ones ticked | `StepList` |
-| risks | what can go wrong, only as the sources state it | `StatusCard` rows without `ok`, or `StepList` |
-| decisions | what is still open, and who decides | `StepList` (one item per decision, the owner in the text) |
+| goal | what the task asks, in one sentence; the task number if the facts give it | `HookStatus` slab alone |
+| where it lives | the way to the screen it changes, then the services or files behind it | `ScreenPath`, then `Diagram` (an overview map: what exists, what the task adds, what is missing) |
+| steps | the work in order, and how the parts talk to each other | `Lanes` for a sequence, `ScreenProposal` for a screen to add, `StepList` for the order |
+| risks | what can go wrong, only as the sources state it | `Matrix` (cases against effects), or `StatusCard` rows without `ok` |
+| decisions | what is still open, and who decides | `Matrix` (options against effects) or `StepList` (one item per decision, the owner in the text) |
 
 **Decisions already taken are not open.** Task notes collect decisions over
 time, and sources of different dates disagree: read every source for its
@@ -211,14 +213,48 @@ final review now counts a closed decision shown as open as a P0.
 When the sources say the work is further along than the request ("to do",
 but already developed), follow the sources and say what is left.
 
-**Screens.** When the video is about an application, show it: a screen the
-narration talks about is clearer than a diagram of it. Look for screenshots
-that already exist (a test run's evidence, a bug report, files the user
-names) and import them; when the screen the story needs is missing and the
-application is a web site the user can reach, capture it, after asking
-once. Every image goes through `shots.mjs`, is looked at, and has what must
-not be seen covered before it is used: [screens.md](references/screens.md).
-Write in `facts.md` where each image comes from.
+**Screens, by default.** When the video is about an application, show it
+(style rule 36): a screen the narration talks about is clearer than a
+diagram of it. A video of a task or of work done on a screen opens its
+"where it lives" or "what changed" chapter with the way there, screen after
+screen: sign-in, the page after it, each navigation step, up to the screen
+and the element the work changes (`ScreenPath`, brackets on where the user
+clicks next). The screens the story talks about follow as `Screenshot`
+shots, and a screen the task will add is drawn on the real one, labelled
+as a proposal (`ScreenProposal`), never shown as existing. Look for
+screenshots that already exist (a test run's evidence, a bug report, files
+the user names) and import them; when the screen the story needs is
+missing and the application is a web site the user can reach, capture it,
+after asking once. When there is no screen to show (a library, a pipeline,
+an outage of a service with no interface), the diagrams carry the video,
+and `OUTCOME.md` says why there are no screens. Every image goes through
+`shots.mjs`, is looked at, and has what must not be seen covered before it
+is used: [screens.md](references/screens.md). Write in `facts.md` where
+each image comes from.
+
+**Diagrams and charts, by default.** The diagrams explain the work; the
+sentences comment them (style rule 36). A video that explains a mechanism,
+a task or a report has at least three diagrams of different shapes, and as
+many more as the subject needs, chosen from: an overview map with zones and
+more than six elements (who talks to whom, what exists, what the work adds,
+what is missing: `Diagram`); a sequence in time with the actors in columns
+(`Lanes`); states and decision branches, what happens if... (`Diagram`
+with `diamond` and `pill` nodes); the files or data grouped by layer with
+their links (`Diagram` with `file` nodes in zones); a comparison grid
+(choices against effects, cases against results: `Matrix`); a chart with
+the real numbers when the sources give numbers (`BarChart`). A row of two
+to four boxes (`FlowDiagram`, a `HookStatus` flow) appears once at most;
+`StatusCard`, `StepList`, `Lesson` and `StrikeReplace` are lists and do not
+count as diagrams. Each element has its line in `facts.md`. A short video
+(under 45 s) and a how-to of one command keep the rule light: one diagram
+that is not a row is enough.
+
+**Explain to the viewer.** Start from what the user of the application sees
+and does, and from why the mechanism works that way, then go down to the
+code: a file or method name is an anchor shown with what it does, never an
+explanation by itself. Call every case, decision and risk by what it is in
+the words of the domain, never by the number or label it has in a note or a
+ticket. No lessons on the programming language or the framework.
 
 ### 4. Script: `script.json` (contract A)
 
@@ -228,16 +264,25 @@ characters), and sentences, each with its chapter.
 
 - **Length**: the time the subject needs to be explained, no fixed number:
   60-90 s of video (about 140-210 words at 2.3-2.7 words per second,
-  usually 12-18 sentences) is a guide for one how-to, not a limit, and
-  "short" or "breve" without a number sets no target (a phone video of
+  usually 12-18 sentences) is a guide for one how-to, not a limit; a task
+  or a report with its screens and its diagrams takes about 2-4 minutes.
+  "Short" or "breve" without a number sets no target (a phone video of
   75 s is fine). **A length the user asks for wins**: write
   it in the storyboard as `targetSeconds` (step 6), and the lint checks the
-  video against it. Over 2 minutes without a length from the user, propose a
-  split. Under 45 s, follow [Short video](#short-video) below; over 90 s,
+  video against it. Over 5 minutes without a length from the user, propose
+  a split. Under 45 s, follow [Short video](#short-video) below; over 90 s,
   [Longer video](#longer-video).
 - **Sentence one states the problem** (or the goal); no greeting, no title.
 - **One idea per sentence**, short, spoken style. Name each thing that will
   appear on screen with the word you will anchor it to.
+- **Time for every screen**: a screen of the path or a `Screenshot` with a
+  zoom needs about 3 s of narration (7-8 spoken words): 0.5 s to see the
+  whole screen, 1.6 s of slow zoom, 0.5 s to read what it went to; a
+  screen without a zoom at least 1.5 s. Give each screen its words: what
+  the user does and sees there ("from the home page, open Orders and
+  search the order number"), from the facts (the steps of a test, the
+  story). The lint fails a zoom cut by the end of the shot or by the next
+  screen: the fix is a longer shot, never a faster move.
 - **Exact terms**: write `kubectl`, `DATABASE_URL`, `503` with their real
   spelling; the markup decides how they are said (`{503|cinque zero tre}`,
   `{en:rollout restart}`). Never put a respelling in the text.
@@ -317,8 +362,10 @@ and `<videoDir>/STORYBOARD.md`:
   three, see [storyboard.md](references/storyboard.md)); and
   `targetSeconds` (`[90, 150]`) when the user asked for a length;
 - 8-10 shots for 90 s, 6-14 s each, cut by idea; a scene from
-  [scenes.md](references/scenes.md) for each; light for concepts, dark for
-  close-ups and the lesson;
+  [scenes.md](references/scenes.md) for each, with the screens and the
+  diagrams of step 3 (a long diagram goes on over two shots with the same
+  elements and other highlights); light for concepts, screens and
+  diagrams, dark for close-ups and the lesson;
 - 3-6 beats per shot on the words that name what appears, 1.5-2.5 s apart;
 - every terminal and code line copied from `facts.md`; `learns` and `sources`
   on every shot;
@@ -348,7 +395,10 @@ The first `stills.mjs` of a video downloads Remotion's headless browser
 (about 280 MB, once per video), as you told the user at step 2.
 
 Read every `qa/contact-sheet-NN.jpg` as an image and check each shot with the
-list in [qa.md](references/qa.md#stills-and-contact-sheets). Fix, lint, re-run
+list in [qa.md](references/qa.md#stills-and-contact-sheets). For every
+diagram ask: with the sound off, does it explain something by itself? One
+that reads as a list or a row is redone. List the diagrams and the shape
+of each in `OUTCOME.md`. Fix, lint, re-run
 `stills.mjs --shot sh01,sh06` for the shots you changed, all in one run (each
 shot's sheets go to `qa/shot-<id>/`). Then the freeze probe; fix any frozen
 pair the same way.
@@ -431,7 +481,7 @@ Write `<videoDir>/OUTCOME.md`:
 | intake | | | n facts, sources: ... |
 | script | | | n sentences, n chapters, checkpoint answered / skipped |
 | voice | | | pace n spoken words/s, terms heard n/m, marked parts heard n/m, said in the narration language: ... |
-| storyboard + lint | | | n shots, n warnings |
+| storyboard + lint | | | n shots, n warnings; screens: n (or why none); diagrams: n, shapes: ... |
 | stills + freeze | | | n stills, lowest change n% |
 | render | | | loudness n LUFS, true peak n dBTP; music <style or file>, n LU under the voice; effects n (n left out) |
 | page | | | |
@@ -485,9 +535,10 @@ join the shot before (another chapter).
 ## Longer video
 
 When the user asks for more than 90 s (for example "90-150 seconds" for a
-task with many decisions), the steps are the same and the user's length
-wins: no split to propose, `targetSeconds` in the storyboard, no length
-warning to explain. Sizes: about 1 shot per 9 s (15 shots for 135 s), the
+task with many decisions), or the screens and the diagrams need it, the
+steps are the same: no split to propose up to 5 minutes, and with a length
+from the user `targetSeconds` in the storyboard. Source: the task videos
+the user asked to make the default lasted about 5 minutes. Sizes: about 1 shot per 9 s (15 shots for 135 s), the
 chapters of the arc (5 for a task), the same 3-6 beats per shot. The chapter bar shows every chapter;
 when the labels do not fit one row, group them into parts. Source: three test videos asked for 90-150 s ended
 at 131-141 s; each one had to explain a "60-90 s" warning.
@@ -548,6 +599,19 @@ vertical") is a new layout: `format=` here, the storyboard's `width` and
 - Showing as open a decision a later source has already taken.
 - A screenshot in the video that nobody looked at: the automatic masks
   find emails and numbers, not the names of people and companies.
+- A video about an application with no screen of it, or a mechanism
+  explained with lists and rows of three boxes: in a test, the user did not
+  understand it. Show the way to the screen and draw at least three
+  diagrams of different shapes.
+- A screen the task will add, drawn as if it existed: it is a
+  `ScreenProposal`, labelled from its first frame.
+- Adding a camera push to pass the freeze probe: add a beat instead (the
+  camera is still by default, style rule 16).
+- A navigation step said in three words ("then Orders"): the screen and its
+  zoom do not fit, and the lint fails. Say what the user does there, from
+  the facts; if the words are already final (after the voice), give the
+  shot the next sentence or move the zoom to an earlier word. Never speed
+  the zoom up.
 - Opening an env file to see the login of a capture: pass it to
   `shots.mjs capture --env-file`, which reads it without printing it.
 - Passing `videosDir=` to `config.mjs video` for a video in another folder:
@@ -569,7 +633,16 @@ vertical") is a new layout: `format=` here, the storyboard's `width` and
   was made in test videos with web application screens only (imported
   test evidence and live captures, 16:9); see
   [screens.md](references/screens.md#not-yet-proven).
-- Videos longer than about 2 minutes and a half.
+- The default of screens and three diagrams: the diagram and screen scenes
+  were written for two task videos of about 5 minutes (16:9), then brought
+  into the catalogue and checked on one lab video. No video has been made
+  yet with the catalogue scenes and these rules from the start, nor in
+  9:16 or 1:1.
+- The camera still and the 2 s freeze window: checked on the stills and the
+  freeze probe of one lab video, not yet watched in a full render.
+- Videos longer than about 2 minutes and a half: two task videos of about
+  5 minutes were made (35 shots; a render of about 24 minutes at
+  concurrency 1 with 3.5 GB free), nothing longer.
 - Short videos with 4 chapters, or with more than one sentence per chapter:
   only a 3-chapter, 3-sentence one was made.
 - macOS and Linux (written for them, run only on Windows), including the

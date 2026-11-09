@@ -37,6 +37,10 @@ export declare const FORMATS: Record<FormatName, { width: number; height: number
 export declare function formatOf(width: number, height: number): FormatName | null;
 export declare const MIN_TEXT: number;
 export declare const LABEL: number;
+export declare const ZOOM_LEAD_S: number;
+export declare const ZOOM_S: number;
+export declare const ZOOM_HOLD_S: number;
+export declare const SCREEN_MIN_S: number;
 export declare const MONO_ADVANCE: number;
 export declare const SANS_ADVANCE: number;
 export declare const BAR: {

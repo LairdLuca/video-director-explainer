@@ -19,8 +19,8 @@ boxed sentence-long caption on every frame, on a dark dashboard, with
 terminal text around 14-18 px. The clearest one put **one subject per frame, big** (a terminal across 80% of the
 width with 32 px text, a two-node diagram, a status card, a number), no
 heading, and a 3-7 word caption without a box. **Something changed about every
-2 seconds, on the word that named it**, and the camera pointed: a slow push,
-a band walking from line to line while the rest dimmed. Light stages carried
+2 seconds, on the word that named it**, and something pointed: a band
+walking from line to line while the rest dimmed, brackets closing on a line. Light stages carried
 concepts; dark stages carried close-ups and the lesson. The symptom shown at
 the start came back resolved at the end.
 
@@ -192,11 +192,10 @@ layout at the tile minimum, 24 px on 9:16 and 1:1 and 28-30 px on 16:9.
    minute, so the switch stays a signal. Seen in test runs.
 10. **The paper under the camera, everything else inside it.** The paper
     (its colour, squares and margin line) is CSS drawn under the camera, so
-    the push never rescales the lines: a rescaled pattern changes every pixel
-    of every frame and made a 5 s clip several times larger. A slow soft
-    glow and the content move with the camera, and a static grain is on top,
-    so holds do not read as frozen (the freeze probe passes on held light
-    and dark shots, 0.6-3.7% of pixels changed per 0.8 s). No WebGL: a shader
+    a push, when a shot asks for one, never rescales the lines: a rescaled
+    pattern changes every pixel of every frame and made a 5 s clip several
+    times larger. A slow soft glow and the content sit inside the camera,
+    and a static grain is on top. No WebGL: a shader
     background in a test run rendered at about 17 s per frame, and another
     test run failed its own freeze check 7 times with a background that did
     not move. A custom scene that does not use
@@ -240,11 +239,22 @@ layout at the tile minimum, 24 px on 9:16 and 1:1 and 28-30 px on 16:9.
     easier to place on a word.
 15. **One accent at a time.** Two things never start within 0.15 s of each
     other unless they are one group (a list staggers 80-150 ms).
-16. **A camera on every shot**: one slow push, 1.00 to about 1.04, with its
-    keys outside the shot so the visible part never starts or stops. No
-    wobble. The frame is never still, so holds feel calm, not frozen.
-17. **No freeze**: no stretch of 0.8 s where under 0.3% of pixels change.
-    Checked on stills (`freeze.mjs`).
+16. **The camera is still.** The frame moves because something arrives on
+    a word, not because the whole picture drifts. A shot may ask for one
+    slow push (`camera`, 1.00 to about 1.04, keys outside the shot), but it
+    starts again at every cut: on a diagram that goes on over two shots it
+    reads as a jump. The user of this plugin asked to remove the slow zoom
+    that every shot used to have, after watching task videos made of
+    diagrams. **A move of the view on a screenshot is slow**: a pan or a
+    zoom lasts 1.6 s, eased in and out, from 0.5 s before its word, and
+    the view holds 0.5 s after it; the same user found the first moves
+    (0.8 s) too fast to follow on application screens. When it does not
+    fit, the shot gets longer, with more words on what the user does
+    there, never a faster move (the same user).
+17. **No freeze**: no stretch of 2 s where under 0.3% of pixels change.
+    Checked on stills (`freeze.mjs`). Beats every 1.5-2.5 s (rule 22) and
+    the captions keep it moving; a longer hold needs a beat. Our choice:
+    the window was 0.8 s while the push filled every gap.
 18. **Pointing devices**, one per beat: corner brackets closing on a line, a
     band behind one line with the rest dimmed to 30%, a tint, a tick or a
     cross drawn as a stroke. The viewer always knows which of the visible
@@ -265,14 +275,15 @@ layout at the tile minimum, 24 px on 9:16 and 1:1 and 28-30 px on 16:9.
 21. **Shots of 6-14 s, usually 1-2 sentences; 8-10 shots for 90 s.** Cut by
     idea, never one shot per sentence. The lint allows 5-15 s, and 4 s for
     the last shot, which ends on the 0.6 s tail.
-22. **A beat every 1.5-2.5 s**: 3-6 beats per shot, with typing or the camera
-    filling the gaps. The clearest video had 43 beats in 88 s.
+22. **A beat every 1.5-2.5 s**: 3-6 beats per shot, with typing, a pan or
+    an element arriving filling the gaps. The clearest video had 43 beats in 88 s.
 23. **Open on the problem.** No title card: the first sentence states the
     problem and the first shot shows it, within 10 frames of the cut.
 24. **Length**: the time the subject needs. 60-90 s for one how-to or one
-    report is a guide, not a limit: "short" without a number sets no
-    target, and a phone video may run past a minute. Over 2 minutes, propose
-    splitting it or ask the user. When the user asks for a length (shorter
+    fix is a guide, not a limit; a task or a report with its screens and
+    diagrams takes about 2-4 minutes (rule 36). "Short" without a number
+    sets no target, and a phone video may run past a minute. Over 5
+    minutes, propose splitting it or ask the user. When the user asks for a length (shorter
     or longer), that length is the target: it goes in the storyboard's
     `targetSeconds` and the lint checks it. Under 45 s, see "Short video" in
     the make skill.
@@ -418,6 +429,24 @@ leaves it to the screen and to a serious subject).
 35. **Mirror the opening at the end**: the symptom of the first shot (a 503)
     comes back resolved in the verify chapter (a 200), same component, same
     size, and tones as a pair: both `accent`, or `negative` then `positive`.
+36. **Screens and diagrams explain, sentences comment them.** A video about
+    an application shows it: the way from sign-in to the screen the work
+    touches (`ScreenPath`), the screens the narration talks about
+    (`Screenshot`), what does not exist yet drawn on the real screen and
+    labelled as a proposal (`ScreenProposal`). A video that explains a
+    mechanism draws it: at least three diagrams of different shapes
+    (`Diagram`, `Lanes`, `Matrix`, `BarChart`), each built in front of the
+    viewer, one element per word, with a legend. A row of two to four boxes
+    (`FlowDiagram`, a `HookStatus` flow) appears once at most; `StatusCard`,
+    `StepList`, `Lesson` and `StrikeReplace` are lists, not diagrams. The
+    test: with the sound off, does the diagram explain something by itself?
+    The user of this plugin, on a task video made of text on cards and
+    diagrams of at most three boxes in a row: "I did not understand"; the
+    diagrams were "too simple, all linear, three objects at most", the
+    video "must have more charts and more diagrams" and the screens of the
+    application "from when you enter and log in". The remade video, with
+    screens and diagrams of several shapes, is the one the user asked to make
+    the default.
 
 ## Avoid
 
@@ -427,7 +456,8 @@ leaves it to the screen and to a serious subject).
 | Terminal text under 28 px (24 px on 9:16 and 1:1), or a terminal in a quarter of the frame | The evidence becomes unreadable |
 | Showing an element before its word, even dimmed | It is read before it is explained |
 | WebGL backgrounds | Software rendering at about 17 s per frame, no clarity gained |
-| Anything that moves drawn outside the camera (the static paper is the one exception) | Holds read as frozen |
+| Anything that moves drawn outside the camera (the static paper is the one exception) | It does not move with a push when a shot asks for one |
+| A slow zoom on every shot | It starts again at every cut; on a diagram split over shots it reads as a jump (the user asked to remove it) |
 | More than 3 transition types | Reads as decoration |
 | The voice respelling on screen | The screen shows the real term |
 | A gate that needs a full render to find a layout bug | Stills find it in minutes; a full re-render in a test run took over an hour |
@@ -437,6 +467,9 @@ leaves it to the screen and to a serious subject).
 ## Common mistakes
 
 - One shot per sentence: the film cuts every 4 s and nothing builds.
+- Explaining an application with diagrams only, or a mechanism with lists
+  and rows of three boxes: the viewer never sees where the work happens,
+  nor how the parts relate (rule 36).
 - Writing the on-screen text as a second caption: labels distil, the caption
   already says the sentence.
 - Using red for every error-like line: one red line per terminal, or none

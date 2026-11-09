@@ -83,6 +83,14 @@ and check for each shot:
    outgoing one, and the chapter bar and caption in between colours. A push
    (the outgoing shot growing and fading) between light and dark is a
    defect.
+9. Diagrams (style rule 36): with the sound off, does each one explain
+   something by itself? One that reads as a list or a row of boxes is
+   redone. The legend is on screen and each `state` keeps its meaning
+   across the video; no node or label outside the stage or covering
+   another.
+10. Screens: the way to the screen is there for a video about an
+   application, each step readable before the next (a zoom on a small
+   label); a `ScreenProposal` carries its label from its first frame.
 
 Fix what is wrong in the storyboard (or the custom scene), run the lint, and
 run `stills.mjs --shot <id>` for the shots you changed (read
@@ -94,16 +102,17 @@ run `stills.mjs --shot <id>` for the shots you changed (read
 node "<plugin>/scripts/freeze.mjs" <videoDir> [--shot sh03]
 ```
 
-At 25%, 50% and 75% of every shot it renders two stills 0.8 s apart and
+At 25%, 50% and 75% of every shot it renders two stills 2 s apart and
 measures the share of pixels that changed. Under 0.3% is a freeze (style rule
 17). Exit 1 if any pair froze; report in `qa/freeze.json`. With `--shot <id>`
 the report goes to `qa/shot-<id>/freeze.json` and `qa/freeze.json` keeps the
 last full run.
 
 A freeze usually means a long hold with nothing arriving: add a beat (a
-focus, a tick, a follow-on line), split the narration differently, or check
-that a custom scene sits inside `StageFrame` (the camera). On the example
-video the quietest pair changed 0.55%.
+focus, a tick, a follow-on line, the next element of a diagram), or split
+the narration differently. Never add a camera push to pass it (style rule
+16). On a lab video with the camera still, the quietest pair changed
+0.53%; with the earlier 0.8 s window the same video had 9 frozen pairs.
 
 ## Loudness
 
@@ -207,6 +216,10 @@ Check:
   unless facts.md has open decisions, options only as facts.md gives them (none, one or more),
   no URL or absolute path, the video linked as <slug>.mp4.
 - A decision already taken (in a later source, or marked as decided) shown as open is a P0.
+- A screen the work will add, shown without its proposal label, is a P0.
+- A video about an application with no screen of it and no reason in OUTCOME.md, or a video that
+  explains a mechanism with fewer than three diagrams of different shapes (a row of boxes, a list,
+  a status card are not diagrams), is a P1. So is a diagram that, with the sound off, explains nothing.
 - Loudness in render.json near -14 LUFS (within 1), true peak at most -1.5 dBTP, no frozen pair in freeze.json.
 - Music and effects (render.json "audio", when music or sfx is on): effectsOverSpeech 0, voiceOverMusicLu
   within 1 of 16 (20 for musicLevel normal, 24 for low), music transientDb at most transientLimitDb (over it a P1:
@@ -259,5 +272,6 @@ because the step did not say which.
   implemented; a fix means a full render.
 - The one-shot preview render (`--composition Shot-<id>`) was run on two
   shots in a review (16:9 and 9:16), not yet at a user's checkpoint.
-- The freeze probe compares two frames 0.8 s apart, a proxy for "change over
-  the whole stretch"; a fast flicker between them would pass.
+- The freeze probe compares two frames 2 s apart, a proxy for "change over
+  the whole stretch"; a fast flicker between them would pass, and so would a
+  stretch where only the captions change.

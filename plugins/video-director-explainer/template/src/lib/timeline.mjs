@@ -40,6 +40,12 @@ export const SCENES = [
   "StepList",
   "Lesson",
   "Screenshot",
+  "ScreenPath",
+  "ScreenProposal",
+  "Diagram",
+  "Lanes",
+  "Matrix",
+  "BarChart",
   "Custom",
 ];
 
@@ -121,7 +127,7 @@ export const splitPhrases = (words, language, maxChars = 42) => {
  * visible part, with the curve's keys placed `outsideS` seconds outside the
  * shot, so the visible part never starts or stops moving.
  */
-export const cameraScale = (frame, durationInFrames, fps, from = 1, to = 1.04, outsideS = 3.5) => {
+export const cameraScale = (frame, durationInFrames, fps, from = 1, to = 1, outsideS = 3.5) => {
   const k = outsideS * fps;
   const span = durationInFrames + 2 * k;
   const ease = (u) => (1 - Math.cos(Math.PI * Math.min(1, Math.max(0, u)))) / 2;
@@ -222,7 +228,9 @@ export const buildTimeline = (storyboard, voiceover) => {
       transitionAsked,
       transitionIn: transitionAsked,
       chapterBar: shot.chapterBar !== false,
-      camera: { from: shot.camera?.from ?? 1, to: shot.camera?.to ?? 1.04 },
+      // No push unless the storyboard asks for one: a slow zoom that starts
+      // again at every cut read as a jump on diagrams split over shots.
+      camera: { from: shot.camera?.from ?? 1, to: shot.camera?.to ?? shot.camera?.from ?? 1 },
       props: shot.props ?? {},
       sentences: ss.map((s) => s.id),
       beatsIn: Array.isArray(shot.beats) ? shot.beats : [],

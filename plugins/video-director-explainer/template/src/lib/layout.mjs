@@ -22,6 +22,18 @@ export const formatOf = (width, height) =>
 // Type sizes the shared arithmetic needs (theme.ts TYPE holds the full scale).
 export const MIN_TEXT = 28;
 export const LABEL = 38;
+
+// A move of the view on a screenshot (a pan or a zoom, in Screenshot and
+// ScreenPath): it starts ZOOM_LEAD_S before its beat and lasts ZOOM_S, eased
+// in and out. The user of this plugin found the first 0.8 s moves on
+// application screens too fast to follow.
+export const ZOOM_LEAD_S = 0.5;
+export const ZOOM_S = 1.6;
+// After a move the view holds at least this long, so the detail it went to
+// can be read, before the shot ends or the next screen arrives (the lint).
+export const ZOOM_HOLD_S = 0.5;
+// A screen of a ScreenPath without a zoom stays at least this long.
+export const SCREEN_MIN_S = 1.5;
 export const MONO_ADVANCE = 0.6;
 // Inter's average advance on mixed text, as a fraction of the font size (an estimate).
 export const SANS_ADVANCE = 0.53;

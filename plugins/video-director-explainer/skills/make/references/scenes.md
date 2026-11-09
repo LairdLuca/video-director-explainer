@@ -1,13 +1,14 @@
 # Scene catalogue
 
-Nine scene types plus a `Custom` escape hatch. A shot picks one with
+Fifteen scene types plus a `Custom` escape hatch. A shot picks one with
 `"scene"` and gives it data in `"props"`; timing never goes in props, it comes
 from **beats** (named anchors on spoken words, see [storyboard.md](storyboard.md)).
 A prop such as `"at": "crash"` names a beat of the same shot.
 
 The props below are the ones the template reads (`template/src/scenes/*.tsx`)
 and the lint checks (`scripts/lint-storyboard.mjs`). Every scene draws inside
-the stage band, inside the shot's camera, on the shot's `theme`.
+the stage band, inside the shot's camera (still unless the shot asks for a
+push), on the shot's `theme`.
 
 Where the catalogue comes from: the scene types of the clearest of the
 earlier test videos, restated as data-driven components; the lint
@@ -295,17 +296,207 @@ A tall image (a page longer than the screen) is drawn small: pan to the part
 the sentence names. A pan moves the focus to the centre of the frame, so a
 region far from it goes out of view: highlight it before the pan.
 
+A pan is a slow move: it starts 0.5 s before its beat and lasts 1.6 s,
+eased in and out, and the view then holds at least 0.5 s. The user of this
+plugin found the first moves (0.8 s, ending on the beat) too fast to follow
+on application screens. The lint fails when the move and its hold do not
+fit before the end of the shot: the shot gets longer (more words on what
+the user does there, or the next sentence), the move is never sped up.
+
+## ScreenPath: the way through the application
+
+```json
+"props": { "steps": [
+  { "src": "shots/login.png", "at": "login", "ref": "submit" },
+  { "src": "shots/home.png", "at": "home", "ref": "orders-menu" },
+  { "src": "shots/orders.png", "at": "orders", "ref": "failed", "zoom": [1430, 313, 1.8],
+    "note": { "text": "Status: payment failed", "at": "failed" } }
+] }
+```
+
+| Prop | Required | Notes |
+|---|---|---|
+| `steps[]` | yes | 1-6, one beat each; every `src` an image of `shots.mjs`, reviewed (the same rule as `Screenshot`) |
+| `steps[].ref` or `.box` | no | where the user clicks next: brackets on a box of `shots.json` (`ref`), or `box` in image pixels (a warning: no source); they go when the next screen arrives |
+| `steps[].zoom` | no | `[x, y, scale]` in image pixels, scale at most 2.2: the point goes to the centre without uncovering the image's edges |
+| `steps[].zoomAt` | no | the zoom's beat; without it the zoom starts 0.4 s after the screen appears, so the whole screen is seen first |
+| `steps[].note` | no | `{ text, at }`: a label in the accent at the bottom of the screen ("where we are", the field's name) |
+
+The path from sign-in to the screen the work changes, screen after screen,
+in one shot: a navigation step lasts two or three seconds, shorter than a
+shot. Each new screen fades in over the previous one on its beat; a zoom is
+the same slow move as a `Screenshot` pan (1.6 s, then 0.5 s to read). The
+lint fails when a screen stays less than 1.5 s, when the next screen
+arrives before a zoom has ended and been read, and when a zoom does not fit
+before the end of the shot. Plan about 3 s of narration for a screen with a
+zoom, 1.5 s without: the narration says what the user does on each screen.
+A long path is two shots.
+
+## ScreenProposal: a screen that does not exist yet
+
+```json
+"props": { "src": "shots/order-1042.png",
+           "label": "PROPOSAL", "labelAt": "panel", "labelX": 1180, "labelY": 24,
+           "pieces": [{ "kind": "panel", "x": 980, "y": 380, "w": 560, "h": 420, "at": "panel" },
+                      { "kind": "header", "x": 980, "y": 380, "w": 560, "h": 64, "text": "Gift card", "at": "panel" },
+                      { "kind": "field", "x": 1010, "y": 480, "w": 500, "h": 70, "text": "Card number", "at": "field" },
+                      { "kind": "button", "x": 1010, "y": 600, "w": 240, "h": 80, "text": "Apply", "at": "apply" }],
+           "pointers": [{ "x": 1010, "y": 600, "w": 240, "h": 80, "at": "apply" }] }
+```
+
+| Prop | Required | Notes |
+|---|---|---|
+| `src` | yes | the real screen the work changes, through `shots.mjs` |
+| `pieces[]` | yes | `kind`: `panel` (white, dashed border in the accent), `header`, `tab` (`active`), `field`, `button`, `text`, `veil` (a dark layer that pulses: a page that waits; gone at `until`); `x, y, w, h` in image pixels; `text`, `size` (at least 28), `at`, `delay` |
+| `label` | yes | the word that says it is a proposal, in the video's language ("PROPOSAL", "PROPOSTA") |
+| `labelAt`, `labelX`, `labelY` | `labelX`, `labelY` yes | where and when the label appears (image pixels) |
+| `pointers[]` | no | brackets on a part of the drawing: `x, y, w, h`, `at` |
+
+What a task will add, drawn on the real screen it changes, from the
+facts (the story, the design notes): never presented as a screen that
+exists. The label is on screen as soon as the drawing is: the lint fails
+when a piece appears before it. Use a light shot (the drawing uses the
+accent on a light screen; a dark shot gets a warning).
+
+## Diagrams and charts
+
+Four scenes for the drawings that explain a mechanism: an overview
+(`Diagram`), a sequence in time (`Lanes`), a comparison (`Matrix`), numbers
+(`BarChart`). They share these rules:
+
+- **Coordinates in stage pixels**: 0,0 is the top left corner of the stage,
+  under the chapter bar. The stage is 1728 x 720 on 16:9 without parts;
+  `useShot().L` and the lint's error give it for the other formats (the
+  lint fails when a `Diagram` node or zone is outside it). A diagram is
+  laid out for one format: the coordinates do not adapt.
+- **It builds in front of the viewer**: an element with `at` does not exist
+  before its beat; `delay` (seconds) moves it after the beat, so several
+  pieces enter one after the other on one beat (a shot has at most 6
+  beats). An element without `at` is there from the first frame: a long
+  diagram goes on in the next shot with the same elements and other
+  highlights (a shot lasts at most 15 s).
+- **`state` has one meaning in the whole video**: `existing` grey (it is
+  already there), `added` the accent (the work adds it), `missing` red and
+  dashed (it is not there today), `good` green, `bad` red, `neutral` ink
+  (default). Put the legend on screen: `legend: [{ state, label, at }]`.
+- **`highlights: [{ at, ids, until }]`** (`Diagram`, `Matrix`): from its
+  beat to the next highlight, or to `until`, the named elements are lit and
+  the rest dims.
+- Every element has its line in `facts.md`: a diagram shows nothing the
+  sources do not say. No text under 28 px: the scenes draw labels at 28-36.
+
+### Diagram: zones, nodes and edges
+
+```json
+"props": {
+  "zones": [{ "id": "shop", "label": "ACME-SHOP", "x": 0, "y": 0, "w": 1180, "h": 640, "at": "shop" }],
+  "nodes": [{ "id": "web", "label": "checkout page", "icon": "app-window", "x": 60, "y": 200, "w": 360, "h": 110, "state": "existing", "at": "page" },
+            { "id": "pay", "label": "payment service", "icon": "server", "x": 700, "y": 200, "w": 400, "h": 110, "state": "existing", "at": "pay" },
+            { "id": "gift", "label": "gift cards", "x": 1300, "y": 420, "w": 380, "h": 110, "state": "added", "at": "gift" }],
+  "edges": [{ "id": "e1", "from": "web", "to": "pay", "label": "POST /pay", "labelDy": -34, "at": "pay", "delay": 0.3 },
+            { "from": "pay", "to": "gift", "state": "added", "at": "gift", "via": [[900, 475]] }],
+  "highlights": [{ "at": "gift", "ids": ["gift", "pay"] }],
+  "legend": [{ "state": "existing", "label": "exists" }, { "state": "added", "label": "the task adds" }]
+}
+```
+
+| Prop | Required | Notes |
+|---|---|---|
+| `nodes[]` | yes | `id`, `label`, `x, y, w, h`; optional `sub`, `icon`, `state`, `at`, `delay`, `shape` (`box` default, `diamond` for a decision, `pill` for a state, `file` for a file name in mono, `plain: true` for the text font), `size` (at least 28) |
+| `edges[]` | no | `from`, `to`, optional `id`, `label` (`labelDx`, `labelDy` move it from the middle), `state`, `dashed`, `via` (elbow points), `at`, `delay`; it draws from its beat |
+| `zones[]` | no | areas behind the nodes: `label`, `x, y, w, h`, `state`, `at`, optional `id` for highlights |
+| `lines[]` | no | dashed boundaries: `x1, y1, x2, y2`, `label`, `labelX`, `labelY`, `state`, `at` |
+| `title`, `titleAt` | no | a title at the top left |
+| `highlights`, `legend`, `legendX`, `legendY` | no | as above; the legend sits at the bottom left by default |
+
+For: the overview map (who talks to whom, what exists, what the work adds,
+what is missing: zones and more than six nodes), decision branches and
+states (`diamond`, `pill`), files or data grouped by layer (`file` nodes in
+zones).
+
+### Lanes: a sequence in time
+
+```json
+"props": {
+  "columns": [{ "id": "user", "label": "customer" }, { "id": "web", "label": "checkout", "at": "web" },
+              { "id": "pay", "label": "payment service", "at": "pay" }],
+  "rows": 4, "timeBand": 140,
+  "messages": [{ "from": "user", "to": "web", "row": 0, "label": "Pay", "at": "web" },
+               { "from": "web", "to": "pay", "row": 1, "label": "POST /pay", "at": "pay" }],
+  "waits": [{ "col": "pay", "fromRow": 1, "toRow": 3, "label": "up to 30 s", "state": "bad", "at": "wait" }],
+  "notes": [{ "col": "web", "row": 3, "label": "timeout", "state": "bad", "side": "left", "at": "timeout" }],
+  "times": [{ "row": 3, "label": "30 s", "at": "timeout" }]
+}
+```
+
+| Prop | Required | Notes |
+|---|---|---|
+| `columns[]` | yes | at least 2: `id`, `label`, `state`, `at` |
+| `rows` | yes | how many rows of time; the space under the headers is shared among them |
+| `messages[]` | no | `from`, `to`, `row` (decimals allowed), `label`, `state`, `dashed`, `at`, `delay`: an arrow that draws across |
+| `notes[]` | no | a dot on a column with a label: `col`, `row`, `label`, `side` (`right` default, `left`), `state`, `at` |
+| `waits[]` | no | a bar that grows down a column: `col`, `fromRow`, `toRow`, `label`, `side`, `state`, `durationS` (default 1.2), `at` |
+| `times[]`, `timeBand` | no | labels in a band on the left (`timeBand` px wide, needed with `times`) |
+| `legend` | no | as above |
+
+For: what happens in which order between actors (the user, the page, a
+service, a queue), and where it waits.
+
+### Matrix: rows against columns
+
+```json
+"props": {
+  "corner": "option",
+  "columns": [{ "label": "cost" }, { "label": "risk" }],
+  "rows": [{ "id": "a", "label": "keep the queue", "cells": [{ "text": "none" }, { "mark": "no", "state": "bad" }], "at": "a" },
+           { "id": "b", "label": "retry in the page", "cells": [{ "text": "2 days" }, { "mark": "yes", "state": "good" }], "at": "b" }],
+  "highlights": [{ "at": "proposal", "ids": ["b"] }]
+}
+```
+
+| Prop | Required | Notes |
+|---|---|---|
+| `columns[]` | yes | `label`, `state`, `at` |
+| `rows[]` | yes | `label`, `cells` (one per column: `text`, `mark` `yes` a tick or `no` a dash, `state`), optional `id`, `state`, `at`, `delay` |
+| `corner` | no | the text over the row labels |
+| `labelWidth`, `rowHeight` | no | default 36% of the width and 92 px; rows shrink to fit, and the lint fails under 50 px a row (split the matrix) |
+| `highlights`, `legend` | no | as above |
+
+For: choices against effects, actions against consequences, test cases
+against results.
+
+### BarChart: the real numbers
+
+```json
+"props": {
+  "title": "Checkout errors per day",
+  "bars": [{ "label": "before 2.4.0", "segments": [{ "from": 0, "to": 3, "state": "existing" }], "value": "3", "at": "before" },
+           { "label": "after 2.4.0", "segments": [{ "from": 0, "to": 412, "state": "bad" }], "value": "412", "at": "after" }],
+  "scale": { "max": 450, "ticks": [0, 150, 300, 450], "unit": "errors" }
+}
+```
+
+| Prop | Required | Notes |
+|---|---|---|
+| `bars[]` | yes | `label`, `segments` (`from`, `to`, `state`, `text` inside the segment, `range: true` for a minimum and a maximum: solid to the minimum, faint to the maximum; several segments stack), optional `sub`, `value` (printed after the bar), `at`, `delay` |
+| `scale` | yes | `max` (no segment above it), `ticks`, `unit` (after the last tick) |
+| `title`, `labelWidth`, `barHeight`, `legend` | no | the labels take 32% of the width by default |
+
+Each bar grows on its beat. Only numbers the sources give: the lint warns
+when a `value` is not found in `facts.md`.
+
 ## Custom: the escape hatch
 
 ```json
 { "scene": "Custom", "component": "src/custom/RetryTimeline.tsx", "props": { "attempts": 3 } }
 ```
 
-Only when no catalogue type fits. Write `<videoDir>/src/custom/<Name>.tsx`,
+Only when no catalogue type fits: the four diagram and chart scenes cover
+maps, sequences, comparisons and numbers. Write `<videoDir>/src/custom/<Name>.tsx`,
 export the component as default or under its file name, and import what it
 needs from `../kit`: `useShot()` (props, theme colours `c`), `useBeat()`
-(`beat("name")` gives the frame), `useShotStart()`, `StageFrame` (camera and
-background, always wrap the scene in it), `tween`, `arrive`, `follow`, `ease`,
+(`beat("name")` gives the frame), `useShotStart()`, `StageFrame` (paper,
+camera and background, always wrap the scene in it), `tween`, `arrive`, `follow`, `ease`,
 `Icon`, `Mark`, `Brackets`, `Slab`, `Paper`, `TYPE`, `BAND`, `mono`, `sans`.
 `useShot().L` gives the frame of the video's format (`width`, `height`,
 `stageTop`, `stageBottom`, `margin`, `textMargin`); `BAND` is the 16:9 frame
@@ -319,7 +510,7 @@ layout. No new npm package.
 | `theme` | `light` | `dark` for close-ups and the lesson (style rule 9) |
 | `transitionIn` | `push` | `wipe`, `fade-dark`; ignored on the first shot. A push between a light and a dark shot is drawn as a crossfade (style rule 29) |
 | `chapterBar` | `true` | `false` hides the bar (fades with the transition) |
-| `camera` | `{ "from": 1, "to": 1.04 }` | a slower or no push: `{ "to": 1.02 }` |
+| `camera` | still (`{ "from": 1, "to": 1 }`) | a slow push only when asked: `{ "to": 1.04 }`. It starts again at every cut, so never on a diagram that goes on over several shots |
 
 ## Common mistakes
 
@@ -339,8 +530,21 @@ layout. No new npm package.
 - In a form whose labels sit under their fields, a box around the label and
   the field below it: that field is the next one. Look at the grid before
   writing the box (a test video measured the wrong field once).
-- A `Custom` scene that does not wrap itself in `StageFrame`: no camera, no
-  background, and the freeze probe fails.
+- A `Custom` scene that does not wrap itself in `StageFrame`: no paper, no
+  background.
+- A camera push on a diagram split over two shots: the zoom starts again at
+  the cut and reads as a jump. The user of this plugin asked to remove it;
+  the camera is still by default.
+- A `ScreenPath` step whose screen stays under 1.5 s, or a zoom anchored to
+  the last word of the shot: the screen cannot be read, the zoom is cut, and
+  the lint fails. Lengthen the shot with words on what the user does there.
+- A `ScreenProposal` without its label from the first frame, or drawn on a
+  dark shot: it passes for a real screen, or its label is unreadable.
+- A `Diagram` laid out for 16:9 in a 9:16 video: the coordinates do not
+  adapt; the lint fails on what falls outside the stage.
+- A `state` used with two meanings in one video (red for "missing" in one
+  shot and "error" in the next without a legend): keep one meaning and a
+  legend on screen.
 - A long value (a task number, a word) in a `HookStatus` slab beside a flow:
   it shrinks to fit; for a hero-size value, drop the flow.
 - `ok: false` on `StatusCard` rows that are options or states, not failed
@@ -363,6 +567,11 @@ layout. No new npm package.
 ## Not yet proven
 
 - `Custom` (tested only with a trivial component).
+- `Diagram`, `Lanes`, `Matrix`, `BarChart`, `ScreenPath` and
+  `ScreenProposal`: written first as custom scenes for two task videos of
+  about 5 minutes each (16:9), then brought into the catalogue and checked on
+  stills, the freeze probe and the lint of one lab video. Not drawn on 9:16
+  or 1:1.
 - `Screenshot` on 9:16 and 1:1, and with images other than full-width
   screens of web applications.
 - The 9:16 and 1:1 layouts: checked on stills of every scene of the example

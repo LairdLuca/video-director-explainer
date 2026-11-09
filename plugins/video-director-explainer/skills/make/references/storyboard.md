@@ -25,7 +25,7 @@ the two.
 | `fps`, `width`, `height` | 30, and the format's size from `video.config.json`: 1920x1080 (16:9), 1080x1920 (9:16) or 1080x1080 (1:1) |
 | `captions` | copy it from `video.config.json`: the template reads it here |
 | `paletteLight`, `paletteDark` | copy them from `video.config.json`: the papers of the light and the dark stage (style rule 8). Left out: the defaults, `giallo` and `notte` |
-| `targetSeconds` | optional: `[min, max]`, the length the user asked for (for example `[90, 150]`). The lint warns outside it; without it the default 60-90 s applies. Write it only when the user named a length |
+| `targetSeconds` | optional: `[min, max]`, the length the user asked for (for example `[90, 150]`). The lint warns outside it; without it, outside 60 s to 5 minutes. Write it only when the user named a length |
 | `chapters` | the chapter bar labels, in order; copy them from `script.json`. Without it the bar shows the ids in uppercase |
 | `parts` | optional: the chapters grouped for the chapter bar, `[{ "id", "label", "chapters": [chapter ids] }]`, in film order, every chapter in exactly one part. Needed when the labels do not fit one row (see below) |
 | `shots` | in narration order; every sentence of `voiceover.json` in exactly one shot |
@@ -67,7 +67,7 @@ A shot:
 | `theme` | no | `light` (default) or `dark` |
 | `transitionIn` | no | `push` (default), `wipe`, `fade-dark`; a push between a light and a dark shot is drawn as a crossfade, by itself |
 | `chapterBar` | no | `false` to hide the bar on this shot |
-| `camera` | no | `{ "from": 1, "to": 1.04 }` |
+| `camera` | no | still; `{ "from": 1, "to": 1.04 }` for a slow push, only when asked |
 | `sfx` | no | sound effects on the shot's key moments: `[{ "kind": "error" or "success", "at": "<beat name>" }]`, see "Sound effects" below |
 | `learns` | yes, by convention | one line: what the viewer learns in this shot |
 | `sources` | yes, by convention | the `facts.md` lines behind what is on screen (`"facts.md:14"`) |
@@ -287,7 +287,7 @@ times, a command without a typing beat, slab and row values not found in
 `facts.md`, labels over 3 words, lesson lines over 6 words, more than one red
 or green terminal line, more than 3 transition types, `fade-dark` outside the
 lesson, too many light-to-dark switches, a video outside `targetSeconds` or,
-without it, outside 60-90 s (under 45 s it says "short video"), a beat not
+without it, outside 60-300 s (under 45 s it says "short video"), a beat not
 used by its scene, a terminal `title` or a code `file` or `startLine` not
 found in `facts.md`, a first and last slab whose tones do not pair (same
 tone, or `negative` then `positive`), a slab value drawn under 120 px to
@@ -337,8 +337,9 @@ by line, exactly.
 
 - Beats on estimated word times (voice step run with `--no-check`): the lint
   allows them with a warning; only clause edges are safe.
-- Storyboards over about 2 minutes and a half: test videos of 131-141 s were
-  rendered, nothing longer.
+- Storyboards over about 2 minutes and a half: test videos of 131-141 s,
+  and two task videos of about 5 minutes made with custom diagram scenes,
+  were rendered; nothing longer.
 - `sfx`: placed and measured on the example (an error and a success effect,
   both in the pause that ends their sentence), then heard by the user in four
   whole videos (five effects each, none over speech); not yet in a video

@@ -1,4 +1,5 @@
 import { Easing, interpolate } from "remotion";
+import { ZOOM_LEAD_S, ZOOM_S } from "./lib/layout.mjs";
 
 // Tweens with easing, not springs (style rule 14): durations are exact, so
 // an entrance can be placed to land on a spoken word.
@@ -33,3 +34,14 @@ export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 /** Opacity for something that does not exist before it starts (style rule 27). */
 export const exists = (progress: number) => (progress <= 0 ? 0 : progress);
+
+/**
+ * Progress of a move of the view on a screenshot (pan or zoom) anchored on
+ * frame `at`: from `leadS` before it (ZOOM_LEAD_S by default; a negative
+ * lead starts after it), for ZOOM_S, eased in and out (lib/layout.mjs,
+ * where the lint reads the same numbers).
+ */
+export const zoomMove = (frame: number, at: number, fps: number, leadS = ZOOM_LEAD_S) => {
+  const start = at - Math.round(leadS * fps);
+  return tween(frame, start, start + Math.round(ZOOM_S * fps), ease.sine);
+};

@@ -2,7 +2,7 @@ import React from "react";
 import { Img, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { Brackets } from "../components/primitives";
 import { StageFrame } from "../components/Stage";
-import { arrive, ease, follow, lerp, tween } from "../motion";
+import { arrive, follow, lerp, tween, zoomMove } from "../motion";
 import { useBeat, useShot, useShotStart } from "../shot";
 import { shots, type ShotBox } from "../shots.generated";
 import { alpha, TYPE } from "../theme";
@@ -48,14 +48,14 @@ export const Screenshot: React.FC = () => {
   const left = (L.width - w) / 2;
   const top = L.stageTop + (L.stageH - h) / 2;
 
-  // Pan: piecewise eased moves between targets, each arriving on its anchor.
+  // Pan: piecewise moves between targets, each a slow eased move around its
+  // anchor (zoomMove: 1.6 s; 0.8 s moves were too fast to follow).
   let fx = iw / 2;
   let fy = ih / 2;
   let s = 1;
   let pz = 0;
   (props.pan ?? []).forEach((p, i) => {
-    const at = beat(p.at);
-    const t = tween(frame, at - Math.round(0.8 * fps), at, ease.sine);
+    const t = zoomMove(frame, beat(p.at), fps);
     fx = lerp(fx, p.to[0], t);
     fy = lerp(fy, p.to[1], t);
     s = lerp(s, Math.min(2, Math.max(1, p.to[2])), t);

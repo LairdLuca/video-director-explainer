@@ -35,7 +35,7 @@ Checks the storyboard of a video project in seconds, without rendering:
     narration near its word (an effect never plays over speech; one that
     finds none is left out, a warning); few of them;
   - the length is inside storyboard.targetSeconds (the length the user
-    asked for) or, without it, 60-90 s (warnings).
+    asked for) or, without it, 60 s to 5 minutes (warnings).
 Values are looked up in facts.md without backticks, bold or case.
 Writes qa/lint.json and refreshes src/icons.generated.ts (the icons the
 storyboard uses, the only ones the template bundles) and the text font
@@ -137,6 +137,61 @@ const main = async () => {
   }
 
   const words = (s) => norm(s).split(" ").filter(Boolean).length;
+
+  // An image shown by a screen scene must come through shots.mjs: its size
+  // and boxes are measured there, and its masks were looked at before the video.
+  const checkImage = (shot, src, what) => {
+    const pre = what ? `${what}: ` : "";
+    const known = src ? shotOfSrc(shotData, src) : null;
+    if (!src) err(shot, `${pre}src is required`);
+    else if (!existsSync(path.join(videoDir, "public", src))) err(shot, `${pre}public/${src} not found`);
+    else if (!known) err(shot, `${pre}${src} is not in shots.json: import or capture it with shots.mjs`);
+    else {
+      if (!known.reviewed) err(shot, `${pre}${src} is not reviewed: look at it, cover what must not be seen (shots.mjs mask), then shots.mjs review`);
+      if (sha256(path.join(videoDir, "public", src)) !== known.sha256) err(shot, `${pre}public/${src} changed after shots.mjs wrote it: import or capture it again`);
+    }
+    return known;
+  };
+  // A slow move of the view (lib/layout.mjs ZOOM_S) needs its whole length
+  // and a hold after it inside the shot: cut in the middle, the viewer never
+  // reads what it went to. An error: the shot gets longer, it is not sped up
+  // (the user of this plugin: lengthen the scene, describe more of what the
+  // user does). Beat frames count from the shot's start. Returns the frame
+  // (shot-relative) where the move and its hold end.
+  const ZOOM_HOLD_S = LY.ZOOM_HOLD_S ?? 0.5;
+  const SCREEN_MIN_S = LY.SCREEN_MIN_S ?? 1.5;
+  const LENGTHEN = "lengthen the shot: describe in the narration, from the facts, more of what the user does and sees on this screen, or give the shot the next sentence; anchoring the move to an earlier word also works. Never speed the move up";
+  const zoomEnds = (shot, at, leadS, what) => {
+    const b = shot.beats[at];
+    if (b === undefined || !Number.isFinite(LY.ZOOM_S)) return undefined;
+    const end = b + Math.round((LY.ZOOM_S - leadS + ZOOM_HOLD_S) * fps);
+    const late = shot.from + end - shot.visibleTo;
+    if (late > 0) err(shot, `${what} on "${at}" needs ${(late / fps).toFixed(1)} s more than the shot has (${LY.ZOOM_S} s of move and ${ZOOM_HOLD_S} s to read): ${LENGTHEN}`);
+    return end;
+  };
+  const STATES = ["existing", "added", "missing", "neutral", "good", "bad"];
+  const checkLegend = (shot, items, need) => {
+    for (const v of items ?? []) {
+      if (!STATES.includes(v.state)) err(shot, `legend state "${v.state}" (${STATES.join(", ")})`);
+      if (v.at) need(v.at, `legend "${v.label}"`);
+    }
+  };
+  const checkHighlights = (shot, items, ids, need) => {
+    for (const h of items ?? []) {
+      need(h.at, "a highlight");
+      if (h.until) need(h.until, "a highlight's end");
+      for (const id of h.ids ?? []) if (!ids.has(id)) err(shot, `highlight on "${id}", which is not an id of the scene`);
+    }
+  };
+  // Stage pixels: nothing drawn outside the stage band.
+  const checkChartBox = (shot, items) => {
+    const W = L.width - 2 * L.margin;
+    for (const q of items) {
+      if (q.x < 0 || q.y < 0 || q.x + q.w > W + 1 || q.y + q.h > L.stageH + 1) {
+        err(shot, `"${q.id ?? q.label ?? ""}" at ${JSON.stringify([q.x, q.y, q.w, q.h])} is outside the stage (${Math.round(W)}x${Math.round(L.stageH)} in a ${fmt} video${timeline.parts.length ? " with parts" : ""})`);
+      }
+    }
+  };
 
   for (const shot of timeline.shots) {
     const p = shot.props ?? {};
@@ -404,16 +459,7 @@ const main = async () => {
         break;
       }
       case "Screenshot": {
-        // The image must come through shots.mjs: its size and boxes are
-        // measured there, and its masks were looked at before the video.
-        const known = p.src ? shotOfSrc(shotData, p.src) : null;
-        if (!p.src) err(shot, "props.src is required");
-        else if (!existsSync(path.join(videoDir, "public", p.src))) err(shot, `public/${p.src} not found`);
-        else if (!known) err(shot, `${p.src} is not in shots.json: import or capture it with shots.mjs`);
-        else {
-          if (!known.reviewed) err(shot, `${p.src} is not reviewed: look at it, cover what must not be seen (shots.mjs mask), then shots.mjs review`);
-          if (sha256(path.join(videoDir, "public", p.src)) !== known.sha256) err(shot, `public/${p.src} changed after shots.mjs wrote it: import or capture it again`);
-        }
+        const known = checkImage(shot, p.src);
         const size = p.size ?? known?.size;
         if (!Array.isArray(size) || size.length !== 2) err(shot, "the size of the image is unknown (shots.json or props.size)");
         else if (known && p.size && (p.size[0] !== known.size[0] || p.size[1] !== known.size[1])) err(shot, `props.size ${p.size.join("x")} is not the image's ${known.size.join("x")}: leave it out`);
@@ -439,7 +485,156 @@ const main = async () => {
         for (const q of p.pan ?? []) {
           need(q.at, "a pan");
           if (q.to?.[2] > 2) warn(shot, "pan scale over 2 (drawn at 2)");
+          zoomEnds(shot, q.at, LY.ZOOM_LEAD_S, "the pan");
         }
+        break;
+      }
+      case "ScreenPath": {
+        const steps = p.steps ?? [];
+        if (steps.length < 1 || steps.length > 6) err(shot, `${steps.length} steps (1-6, one beat each)`);
+        steps.forEach((st, i) => {
+          const what = `step ${i + 1}`;
+          need(st.at, what);
+          const known = checkImage(shot, st.src, what);
+          if (st.ref !== undefined && st.box !== undefined) err(shot, `${what}: "ref" or "box", not both`);
+          if (st.ref !== undefined && known && !known.boxes?.[st.ref]) err(shot, `${what}: ref "${st.ref}" is not a box of ${st.src} (${Object.keys(known.boxes ?? {}).join(", ") || "none"})`);
+          if (st.box !== undefined) warn(shot, `${what}: box ${JSON.stringify(st.box)} has no source: prefer a box of shots.json ("ref")`);
+          if (st.zoom !== undefined) {
+            if (!Array.isArray(st.zoom) || st.zoom.length !== 3) err(shot, `${what}: zoom is [x, y, scale]`);
+            else if (st.zoom[2] > 2.2) warn(shot, `${what}: zoom scale over 2.2 (drawn at 2.2)`);
+            if (st.zoomAt) need(st.zoomAt, `${what}'s zoom`);
+            const end = zoomEnds(shot, st.zoomAt ?? st.at, st.zoomAt ? LY.ZOOM_LEAD_S : -0.4, `${what}'s zoom`);
+            // The next screen fades in from 5 frames before its beat.
+            const next = steps[i + 1] ? beats[steps[i + 1].at] : undefined;
+            if (end !== undefined && next !== undefined && next - 5 < end) {
+              err(shot, `${what}: the next screen arrives ${((end - next + 5) / fps).toFixed(1)} s before this screen's zoom has ended and been read: ${LENGTHEN}`);
+            }
+          }
+          if (st.note) {
+            need(st.note.at, `${what}'s note`);
+            if (!st.note.text) err(shot, `${what}: a note without text`);
+          }
+        });
+        // A screen shown for less than SCREEN_MIN_S cannot be read.
+        for (let i = 1; i < steps.length; i++) {
+          const [a, b] = [beats[steps[i - 1].at], beats[steps[i].at]];
+          if (a !== undefined && b !== undefined && (b - a) / fps < SCREEN_MIN_S) err(shot, `step ${i} is on screen for ${((b - a) / fps).toFixed(1)} s before step ${i + 1} (under ${SCREEN_MIN_S} s): ${LENGTHEN}`);
+        }
+        const lastStep = steps[steps.length - 1];
+        if (lastStep && beats[lastStep.at] !== undefined && !lastStep.zoom && shot.from + beats[lastStep.at] + Math.round(SCREEN_MIN_S * fps) > shot.visibleTo) {
+          err(shot, `step ${steps.length} is on screen for less than ${SCREEN_MIN_S} s before the shot ends: ${LENGTHEN}`);
+        }
+        break;
+      }
+      case "ScreenProposal": {
+        const known = checkImage(shot, p.src);
+        // The drawing must never pass for a screen that exists.
+        if (!p.label) err(shot, "props.label is required: the drawing is always labelled as a proposal on screen");
+        if (p.labelAt) need(p.labelAt, "the label");
+        if (!(p.pieces ?? []).length) err(shot, "props.pieces is empty");
+        const size = known?.size;
+        for (const q of p.pieces ?? []) {
+          if (!["panel", "header", "tab", "field", "button", "text", "veil"].includes(q.kind)) err(shot, `piece kind "${q.kind}" (panel, header, tab, field, button, text, veil)`);
+          if (q.at) need(q.at, `piece ${q.kind}`);
+          if (q.until) need(q.until, `piece ${q.kind}'s end`);
+          if (size && (q.x < 0 || q.y < 0 || q.x + q.w > size[0] || q.y + q.h > size[1])) err(shot, `piece ${JSON.stringify([q.x, q.y, q.w, q.h])} is outside the image`);
+          if (q.size !== undefined && q.size < LY.MIN_TEXT) warn(shot, `piece size ${q.size} is drawn at ${LY.MIN_TEXT}`);
+          const early = p.labelAt && (!q.at || (beats[q.at] !== undefined && beats[p.labelAt] !== undefined && beats[q.at] < beats[p.labelAt]));
+          if (early) err(shot, `piece ${q.kind} is on screen before the proposal label (labelAt "${p.labelAt}"): label the drawing from its first frame`);
+        }
+        for (const q of p.pointers ?? []) need(q.at, "a pointer");
+        if (shot.theme === "dark") warn(shot, "a proposal on a dark shot: its label and pieces use the dark palette's light accent on a light screen; use a light shot");
+        break;
+      }
+      case "Diagram": {
+        const nodes = p.nodes ?? [];
+        if (!nodes.length) err(shot, "props.nodes is empty");
+        const ids = new Set(nodes.map((x) => x.id));
+        if (ids.size !== nodes.length) err(shot, "two nodes with the same id");
+        for (const node of nodes) {
+          if (node.at) need(node.at, `node ${node.id}`);
+          if (node.icon) checkIcon(shot, node.icon);
+          if (node.shape && !["box", "diamond", "pill", "file"].includes(node.shape)) err(shot, `node ${node.id}: shape "${node.shape}" (box, diamond, pill, file)`);
+          if (node.size !== undefined && node.size < LY.MIN_TEXT) warn(shot, `node ${node.id}: size ${node.size} is drawn at ${LY.MIN_TEXT}`);
+        }
+        for (const e of p.edges ?? []) {
+          if (e.at) need(e.at, `edge ${e.from}->${e.to}`);
+          if (!ids.has(e.from) || !ids.has(e.to)) err(shot, `edge ${e.from}->${e.to} refers to a missing node`);
+        }
+        for (const z of p.zones ?? []) if (z.at) need(z.at, `zone ${z.label ?? ""}`.trim());
+        for (const l of p.lines ?? []) if (l.at) need(l.at, "a line");
+        if (p.titleAt) need(p.titleAt, "the title");
+        const named = [...ids, ...(p.zones ?? []).map((z) => z.id), ...(p.edges ?? []).map((e) => e.id)].filter(Boolean);
+        checkHighlights(shot, p.highlights, new Set(named), need);
+        checkLegend(shot, p.legend, need);
+        checkChartBox(shot, [...nodes, ...(p.zones ?? [])]);
+        break;
+      }
+      case "Lanes": {
+        const cols = p.columns ?? [];
+        if (cols.length < 2) err(shot, `${cols.length} columns (at least 2)`);
+        if (!(p.rows >= 1)) err(shot, "props.rows must be 1 or more");
+        const ids = new Set(cols.map((k) => k.id));
+        for (const k of cols) if (k.at) need(k.at, `column ${k.id}`);
+        const inRows = (r, what) => {
+          if (typeof r !== "number" || r < 0 || r > p.rows - 1) err(shot, `${what}: row ${r} is outside 0-${p.rows - 1}`);
+        };
+        for (const m of p.messages ?? []) {
+          if (m.at) need(m.at, `message ${m.from}->${m.to}`);
+          if (!ids.has(m.from) || !ids.has(m.to)) err(shot, `message ${m.from}->${m.to} refers to a missing column`);
+          inRows(m.row, `message ${m.from}->${m.to}`);
+        }
+        for (const n of p.notes ?? []) {
+          if (n.at) need(n.at, `note "${n.label}"`);
+          if (!ids.has(n.col)) err(shot, `note "${n.label}" is on a missing column ${n.col}`);
+          inRows(n.row, `note "${n.label}"`);
+        }
+        for (const a of p.waits ?? []) {
+          if (a.at) need(a.at, `wait on ${a.col}`);
+          if (!ids.has(a.col)) err(shot, `wait on a missing column ${a.col}`);
+          inRows(a.fromRow, `wait on ${a.col}`);
+          inRows(a.toRow, `wait on ${a.col}`);
+        }
+        for (const t of p.times ?? []) {
+          if (t.at) need(t.at, `time "${t.label}"`);
+          inRows(t.row, `time "${t.label}"`);
+        }
+        if ((p.times ?? []).length && !(p.timeBand > 0)) err(shot, "times need a timeBand (the width of the band on the left)");
+        checkLegend(shot, p.legend, need);
+        break;
+      }
+      case "Matrix": {
+        const cols = p.columns ?? [];
+        const rows = p.rows ?? [];
+        if (!cols.length) err(shot, "props.columns is empty");
+        if (!rows.length) err(shot, "props.rows is empty");
+        for (const k of cols) if (k.at) need(k.at, `column "${k.label}"`);
+        for (const r of rows) {
+          if (r.at) need(r.at, `row "${r.label}"`);
+          if ((r.cells ?? []).length !== cols.length) err(shot, `row "${r.label}" has ${(r.cells ?? []).length} cells for ${cols.length} columns`);
+          for (const k of r.cells ?? []) if (k.mark !== undefined && !["yes", "no"].includes(k.mark)) err(shot, `row "${r.label}": mark "${k.mark}" (yes, no)`);
+        }
+        checkHighlights(shot, p.highlights, new Set(rows.map((r) => r.id).filter(Boolean)), need);
+        checkLegend(shot, p.legend, need);
+        const room = L.stageH - 76 - (p.legend?.length ? 50 : 0);
+        if (rows.length && room / rows.length < 50) err(shot, `${rows.length} rows leave ${Math.floor(room / rows.length)} px a row in a ${fmt} video: split the matrix`);
+        break;
+      }
+      case "BarChart": {
+        const bars = p.bars ?? [];
+        if (!bars.length) err(shot, "props.bars is empty");
+        if (!(p.scale?.max > 0)) err(shot, "props.scale.max must be a number over 0");
+        for (const b of bars) {
+          if (b.at) need(b.at, `bar "${b.label}"`);
+          if (!(b.segments ?? []).length) err(shot, `bar "${b.label}" has no segments`);
+          for (const sg of b.segments ?? []) {
+            if (!(sg.from >= 0 && sg.to >= sg.from)) err(shot, `bar "${b.label}": a segment from ${sg.from} to ${sg.to}`);
+            if (p.scale?.max > 0 && sg.to > p.scale.max) err(shot, `bar "${b.label}": ${sg.to} is over the scale's max ${p.scale.max}`);
+          }
+          // The numbers of a chart come from the sources like any value on screen.
+          if (b.value && !factsMention(b.value)) warn(shot, `bar value "${b.value}" not found in facts.md`);
+        }
+        checkLegend(shot, p.legend, need);
         break;
       }
       case "Custom": {
@@ -480,8 +675,9 @@ const main = async () => {
   if (switches > Math.max(3, 3 * minutes)) warn(null, `${switches} light-to-dark switches in ${minutes.toFixed(1)} min (at most 3 per minute)`);
   const lengthS = timeline.durationInFrames / fps;
   // storyboard.targetSeconds [min, max] is the length the user asked for;
-  // without it the default 60-90 s applies. The fixed "a how-to is 60-90 s"
-  // fired on every video a user asked to be 90-150 s (three test videos).
+  // without it 60 s to 5 minutes. The fixed "a how-to is 60-90 s" fired on
+  // every video a user asked to be 90-150 s (three test videos), and a task
+  // video with its screens and diagrams takes 2-5 minutes.
   const target = storyboard.targetSeconds;
   const asked = Array.isArray(target) && target.length === 2 && target.every((x) => Number.isFinite(x)) && target[0] < target[1];
   if (target !== undefined && !asked) err(null, "targetSeconds must be [min, max] in seconds, e.g. [90, 150]");
@@ -489,8 +685,8 @@ const main = async () => {
     if (lengthS < target[0] || lengthS > target[1]) warn(null, `the video lasts ${lengthS.toFixed(1)} s, outside the ${target[0]}-${target[1]} s asked for (targetSeconds)`);
   } else if (lengthS < 45) {
     warn(null, `the video lasts ${lengthS.toFixed(1)} s: a short video (see "Short video" in the make skill); if the user asked for this length, set targetSeconds in storyboard.json`);
-  } else if (lengthS < 60 || lengthS > 90) {
-    warn(null, `the video lasts ${lengthS.toFixed(1)} s, outside the default 60-90 s; if the user asked for another length, set targetSeconds in storyboard.json`);
+  } else if (lengthS < 60 || lengthS > 300) {
+    warn(null, `the video lasts ${lengthS.toFixed(1)} s, outside the default 60-300 s; if the user asked for another length, set targetSeconds in storyboard.json, otherwise propose a split`);
   }
   if (storyboard.fps && storyboard.fps !== 30) warn(null, "fps is not 30");
 

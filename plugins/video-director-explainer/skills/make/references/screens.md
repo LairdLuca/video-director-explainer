@@ -1,10 +1,13 @@
 # Screens: real screenshots in a video
 
-A video about an application is clearer when it shows the application. The
-`Screenshot` scene shows one image with a camera pan and highlights on its
-parts; this file is how the images get there: imported or captured, with
+A video about an application is clearer when it shows the application,
+and the make skill does it by default. The `Screenshot` scene shows one
+image with a slow pan and highlights on its parts; `ScreenPath` shows the
+way through the application, several screens in one shot; `ScreenProposal`
+draws a screen to add on the real one ([scenes.md](scenes.md)). This file
+is how the images get there: imported or captured, with
 their boxes measured and their sensitive data covered, through
-`shots.mjs`. Every image a `Screenshot` shows must come through it: the lint
+`shots.mjs`. Every image these scenes show must come through it: the lint
 refuses any other.
 
 ## Where the images come from
@@ -107,7 +110,20 @@ box measured by eye; the contact sheet is the check.
 
 `size` comes from `shots.json`; `ref` names a box of the image. The pan
 target is a point of the image: the centre of the box it goes to (`x + w/2`,
-`y + h/2`, from `shots.mjs list` or `shots.json`).
+`y + h/2`, from `shots.mjs list` or `shots.json`). A pan takes 1.6 s, from
+0.5 s before its word, and the view holds 0.5 s after it: the word must
+come at least 1.6 s before the end of the shot, or the lint fails. When it
+does not fit, the shot gets longer: the narration says more of what the
+user does on that screen, or the shot takes the next sentence.
+
+**The way to the screen.** For a task on a screen, the first images are
+the way there: the sign-in page, the page after it, each menu or link, the
+screen the work changes. Existing evidence first (a test run that walked
+that path on the current code); otherwise a capture that only navigates:
+it reads pages, never saves, confirms or clicks a command that changes
+data. They go in one `ScreenPath` shot, with brackets on where the user
+clicks next, and the narration gives each screen its words: where we are,
+what the user clicks, what appears (about 3 s for a screen with a zoom).
 
 ## Common mistakes
 
@@ -143,6 +159,9 @@ target is a point of the image: the centre of the box it goes to (`x + w/2`,
 - The WebSocket filter and the WebRTC and DNS-prefetch switches were tried on a site without WebSockets only.
 - Closed shadow roots cannot be read: text inside them is not found by `autoMask`. A frame that cannot be read is covered whole.
 - Desktop applications: import only; no capture of a native window.
+- `ScreenPath` and `ScreenProposal` in a video made from the catalogue:
+  checked on one lab video; before that, as custom scenes in two task
+  videos.
 - `autoMask` patterns are shapes; they miss names and catch harmless numbers
   (dates written as long numbers). Seen in test runs: the look at every
   image is what found the names.
